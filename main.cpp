@@ -339,7 +339,7 @@ void action_select_prev_video_page() {
 
 void action_select_next_video_page() {
     if(selected_video < current_video_count - 1)
-        selected_video++;
+        selected_video += std::min(current_video_count - 1 - selected_video, videos_per_page);
 }
 
 void action_select_first_video() {
