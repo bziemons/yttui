@@ -47,13 +47,13 @@ static json api_request(const std::string &url, std::map<std::string, std::strin
 
     //curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
     curl_easy_perform(curl);
+    curl_free(real_url);
 
     data.push_back(0);
 
     int http_response = 0;
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_response);
 
-    curl_free(real_url);
     curl_url_cleanup(u);
     curl_easy_cleanup(curl);
     if(headers)
