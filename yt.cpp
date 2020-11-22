@@ -228,16 +228,20 @@ void Channel::fetch_new_videos(sqlite3 *db, progress_info *info, std::optional<s
 
 void Channel::load_info(sqlite3 *db)
 {
+    video_count = 0;
+    unwatched = 0;
+
     sqlite3_stmt *query;
-    SC(sqlite3_prepare_v2(db, "SELECT "
-                              "(SELECT count(*) FROM videos WHERE channelId = ?1), "
-                              "(SELECT count(*) FROM videos WHERE channelId = ?1 AND flags & ?2 = 0)"
-                              ";", -1, &query, nullptr));
+    SC(sqlite3_prepare_v2(db, "SELECT flags, count(*) as videos FROM videos where channelId = ?1 GROUP by flags;", -1, &query, nullptr));
     SC(sqlite3_bind_text(query, 1, id.c_str(), -1, SQLITE_TRANSIENT));
-    SC(sqlite3_bind_int(query, 2, kWatched));
-    sqlite3_step(query);
-    video_count = sqlite3_column_int(query, 0);
-    unwatched = sqlite3_column_int(query, 1);
+    while(sqlite3_step(query) == SQLITE_ROW) {
+        const int flags = sqlite3_column_int(query, 0);
+        const int count = sqlite3_column_int(query, 1);
+
+        video_count += count;
+        if((flags & kWatched) == 0)
+            unwatched += count;
+    }
     SC(sqlite3_finalize(query));
 }
 
