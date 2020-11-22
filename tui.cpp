@@ -12,6 +12,15 @@ termpaint_terminal *terminal;
 termpaint_surface *surface;
 
 AttributeSet attributes[ASetTypeCount];
+std::unordered_map<std::string, std::string> key_symbols;
+
+struct button_info {
+    Button button;
+    std::string string;
+    size_t width;
+};
+
+std::vector<button_info> all_buttons;
 
 std::deque<Event> eventqueue;
 
@@ -52,6 +61,20 @@ std::optional<Event> wait_for_event(termpaint_integration *integration, int time
 
 void tp_init()
 {
+    all_buttons = {
+        {Button::Ok, "Ok", 2},
+        {Button::Cancel, "Cancel", 6},
+        {Button::Yes, "Yes", 3},
+        {Button::No, "No", 2},
+    };
+    key_symbols = {
+        {"ArrowLeft", "←"},
+        {"ArrowUp", "↑"},
+        {"ArrowRight", "→"},
+        {"ArrowDown", "↓"},
+        {"Escape", "Esc"},
+    };
+
     auto new_attr_set = [](AttributeSet &set, int color, int style = 0) {
         set.normal = termpaint_attr_new(color, TERMPAINT_DEFAULT_COLOR);
         termpaint_attr_set_style(set.normal, style);
@@ -335,20 +358,8 @@ std::vector<std::string> split(const std::string &str, const char delim, const u
     return parts;
 }
 
-struct button_info {
-    Button button;
-    std::string string;
-    size_t width;
-};
-
-static std::vector<button_info> all_buttons = {
-    {Button::Ok, "Ok", 2},
-    {Button::Cancel, "Cancel", 6},
-    {Button::Yes, "Yes", 3},
-    {Button::No, "No", 2},
-};
-static const char *button_gfx_left[]={"[", " "};
-const char *button_gfx_right[]={"]", " "};
+static const char *button_gfx_left[] = {"[", " "};
+static const char *button_gfx_right[] = {"]", " "};
 
 Button message_box(const std::string &caption, const std::string &text, const Button buttons, const Button default_button, const Align align)
 {
@@ -615,14 +626,6 @@ static void draw_help(const std::vector<helpitem> &items)
 
     message_box("Help", to_show.c_str());
 }
-
-static std::unordered_map<std::string, std::string> key_symbols = {
-    {"ArrowLeft", "←"},
-    {"ArrowUp", "↑"},
-    {"ArrowRight", "→"},
-    {"ArrowDown", "↓"},
-    {"Escape", "Esc"},
-};
 
 static std::string format_key(const action &action) {
     std::string str;
