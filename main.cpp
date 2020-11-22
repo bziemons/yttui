@@ -121,9 +121,9 @@ void draw_no_channels_msg()
 
     const std::string text("No configured channels.\n"
                            "Press the following keys to add one:\n"
-                           "a    Add by name\n"
-                           "A    Add by ID\n"
-                           "Or press h for help or ^q to quit.");
+                           "a    Add channel by name\n"
+                           "A    Add channel by ID\n"
+                           "Or press F1 for help or C-q to quit.");
     {
         std::pair<size_t, size_t> size = string_size(text);
         write_multiline_string((cols - size.first) / 2, (rows - size.second) / 2, text, get_attr(ASNormal));
