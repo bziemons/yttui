@@ -158,13 +158,21 @@ int get_selection(const std::string &caption, const std::vector<std::string> &en
 
     const int rows_needed = entries.size()+2; // Number of entries and top/bottom border
 
-    const int cols = termpaint_surface_width(surface);
-    const int rows = termpaint_surface_height(surface);
+    bool done = false;
+    std::vector<action> actions = {
+        {TERMPAINT_EV_KEY, "ArrowUp", 0, [&](){ if(selected > 0) selected--; }, "Previous option"},
+        {TERMPAINT_EV_KEY, "ArrowDown", 0, [&](){ if(selected < entries.size() - 1) selected++; }, "Next option"},
+        {TERMPAINT_EV_KEY, "Escape", 0, [&](){ selected = -1; done = true; }, "Abort selection"},
+        {EV_IGNORE, "1..9", 0, nullptr, "Select option 1..9"},
+    };
 
-    int x, y;
-    resolve_align(align, cols_needed, rows_needed, 0, cols, 0, rows, x, y);
+    while (!done) {
+        const int cols = termpaint_surface_width(surface);
+        const int rows = termpaint_surface_height(surface);
 
-    while (true) {
+        int x, y;
+        resolve_align(align, cols_needed, rows_needed, 0, cols, 0, rows, x, y);
+
         draw_box_with_caption(x, y, cols_needed, rows_needed, caption);
         int yy = y+1;
 
@@ -180,32 +188,21 @@ int get_selection(const std::string &caption, const std::vector<std::string> &en
         if(!event)
             abort();
 
-        if(event->type == TERMPAINT_EV_CHAR) {
-            if(event->string.length() == 1) {
+        if(!tui_handle_action(*event, actions)) {
+            if(event->type == TERMPAINT_EV_CHAR && event->string.length() == 1) {
                 char c = event->string[0];
                 if(c>'0' && c<='9') {
                     size_t idx = c - '0';
                     if(idx > entries.size())
                         continue;
-                    return idx - 1;
+                    selected = idx - 1;
+                    done = true;
                 }
-            }
-        } else if (event->type == TERMPAINT_EV_KEY) {
-            if (event->string == "Escape") {
-                return -1;
-            } else if(event->string == "ArrowUp") {
-                if(selected > 0)
-                    selected--;
-            } else if(event->string == "ArrowDown") {
-                if(selected < entries.size() - 1)
-                    selected++;
-            } else if(event->string == "Enter" || event->string == "NumpadEnter") {
-                return static_cast<int>(selected);
             }
         }
     }
 
-    return -1;
+    return selected;
 }
 
 Align operator|(const Align &a, const Align &b)
@@ -241,7 +238,24 @@ std::string get_string(const std::string &caption, const std::string &text, cons
     termpaint_terminal_set_cursor_visible(terminal, true);
     termpaint_terminal_set_cursor_style(terminal, TERMPAINT_CURSOR_STYLE_BAR, true);
 
-    while(true) {
+    bool done = false;
+    std::vector<action> actions = {
+        {TERMPAINT_EV_KEY, "Home", 0, [&](){ input_pos = 0; }, "Go to beginning of input"},
+        {TERMPAINT_EV_CHAR, "a", TERMPAINT_MOD_CTRL, [&](){ input_pos = 0; }, "Go to beginning of input"},
+        {TERMPAINT_EV_KEY, "End", 0, [&](){ input_pos = input.size(); }, "Go to end of input"},
+        {TERMPAINT_EV_CHAR, "e", TERMPAINT_MOD_CTRL, [&](){ input_pos = input.size(); }, "Go to end of input"},
+        {TERMPAINT_EV_KEY, "ArrowLeft", 0, [&](){ if(input_pos > 0) input_pos--; }, "Move left"},
+        {TERMPAINT_EV_KEY, "ArrowRight", 0, [&](){ if(input_pos < input.size()) input_pos++; }, "Move right"},
+
+        // FIXME: Correctly handle deletion of clusters with more than one codepoint e.g. ° or ä
+        {TERMPAINT_EV_KEY, "Delete", 0, [&](){ if(input_pos < input.size()) { input.erase(input_pos, 1); } }, "Delete input forward"},
+        {TERMPAINT_EV_KEY, "Backspace", 0, [&](){ if(!input.empty()) { input.erase(input_pos - 1, 1); input_pos--; }}, "Delete input backward"},
+
+        {TERMPAINT_EV_KEY, "Escape", 0, [&](){ input.clear(); done = true; }, "Abort input"},
+        {TERMPAINT_EV_KEY, "Enter", 0, [&](){ done = true; }, "Confirm input"},
+    };
+
+    while(!done) {
         draw_box_with_caption(x, y, cols_needed, rows_needed, caption);
         if(!text.empty())
             termpaint_surface_write_with_attr(surface, x + 1, y + 1, text.c_str(), attributes[ASNormal].normal);
@@ -254,39 +268,18 @@ std::string get_string(const std::string &caption, const std::string &text, cons
         if(!event)
             abort();
 
-        if(event->type == TERMPAINT_EV_CHAR) {
-            if(event->string == "a" && event->modifier & TERMPAINT_MOD_CTRL) {
-                input_pos = 0;
-            } else if (event->string == "e" && event->modifier & TERMPAINT_MOD_CTRL) {
-                input_pos = input.size();
-            } else {
-                if(input_pos + 1 == cols_needed - 1)
+        if(!tui_handle_action(*event, actions) && event->type != EV_TIMEOUT)
+        {
+            if(input_pos + 1 == cols_needed - 1)
+                continue;
+            if(event->type == TERMPAINT_EV_KEY) {
+                if(event->string == "Space")
+                    event->string = " ";
+                else
                     continue;
-                input.insert(input_pos, event->string);
-                input_pos++;
             }
-        } else if (event->type == TERMPAINT_EV_KEY) {
-            if (event->string == "Escape") {
-                input.clear();
-                break;
-            } else if(event->string == "Backspace") {
-                if(!input.empty()) {
-                    input.erase(input_pos - 1, 1);
-                    input_pos--;
-                }
-            } else if(event->string == "Delete") {
-                if(input_pos < input.size()) {
-                    input.erase(input_pos, 1);
-                }
-            } else if(event->string == "ArrowLeft") {
-                if(input_pos > 0)
-                    input_pos--;
-            } else if(event->string == "ArrowRight") {
-                if(input_pos < input.size())
-                    input_pos++;
-            } else if(event->string == "Enter" || event->string == "NumpadEnter") {
-                break;
-            }
+            input.insert(input_pos, event->string);
+            input_pos++;
         }
     }
 
@@ -358,22 +351,34 @@ Button message_box(const std::string &caption, const std::string &text, const Bu
         width = std::max(width, string_width(line));
     }
 
-    const size_t cols = termpaint_surface_width(surface);
-    const size_t rows = termpaint_surface_height(surface);
-
     const size_t rows_needed = 4 + lines.size();
     const size_t cols_needed = width + 4;
 
-    int x, y;
-    resolve_align(align, cols_needed, rows_needed, 0, cols, 0, rows, x, y);
+    bool done = false;
+    std::vector<action> actions;
+    if(active_buttons.size() > 1) {
+        actions = {
+            {TERMPAINT_EV_KEY, "Enter", 0, [&](){ done = true; }, "Confirm Selection"},
+            {TERMPAINT_EV_KEY, "ArrowLeft", 0, [&](){ if(selected_button > 0) selected_button--;}, "Previous option"},
+            {TERMPAINT_EV_KEY, "ArrowRight", 0, [&](){ if(selected_button < active_buttons.size() - 1) selected_button++; }, "Next option"},
+        };
+    } else {
+        actions = {
+            {TERMPAINT_EV_KEY, "Enter", 0, [&](){ done = true; }, "Close dialog"},
+        };
+    }
 
-    while(true) {
+    while(!done) {
+        const size_t cols = termpaint_surface_width(surface);
+        const size_t rows = termpaint_surface_height(surface);
+        int x, y;
+        resolve_align(align, cols_needed, rows_needed, 0, cols, 0, rows, x, y);
+
         draw_box_with_caption(x, y, cols_needed, rows_needed, caption);
 
         for(size_t i=0; i<lines.size(); i++) {
             termpaint_surface_write_with_attr(surface, x + 2, y + 1 + i, lines[i].c_str(), attributes[ASNormal].normal);
         }
-
 
         int button_x = x + 2;
         for(size_t btn=0; btn<active_buttons.size(); btn++) {
@@ -393,15 +398,7 @@ Button message_box(const std::string &caption, const std::string &text, const Bu
         if(!event)
             abort();
 
-        if (event->type == TERMPAINT_EV_KEY) {
-            if (event->string == "Escape" || event->string == "Enter" || event->string == "NumpadEnter") {
-                break;
-            } else if(event->string == "ArrowLeft" && selected_button > 0) {
-                selected_button--;
-            } else if(event->string == "ArrowRight" && selected_button < active_buttons.size() - 1) {
-                selected_button++;
-            }
-        }
+        tui_handle_action(*event, actions);
     }
 
     return active_buttons[selected_button].button;
@@ -534,4 +531,117 @@ void tui_abort(std::string message)
 
     message_box("Error", simple_wrap(message, cols/2));
     exit(1);
+}
+
+static void pad_to_width(std::string &str, const size_t width)
+{
+    const size_t current = string_width(str);
+    str.append(width-current, ' ');
+}
+
+struct helpitem {
+    std::string key;
+    std::string text;
+};
+
+static void draw_help(const std::vector<helpitem> &items)
+{
+    const size_t rows = termpaint_surface_height(surface);
+
+    const size_t rows_per_column = rows / 3 * 2;
+
+    std::vector<std::vector<std::string>> column_texts;
+
+    const size_t text_columns = 1 + items.size() / rows_per_column;
+
+    size_t item = 0;
+    for(size_t column=0; column<text_columns; column++) {
+        const size_t items_this_column = std::min(items.size() - item, rows_per_column);
+        std::vector<std::string> texts;
+        size_t key_width = 0;
+        size_t text_width = 0;
+        for(size_t i=0; i<items_this_column; i++) {
+            key_width = std::max(string_width(items[item + i].key), key_width);
+            text_width = std::max(string_width(items[item + i].text), text_width);
+        }
+        for(size_t i=0; i<items_this_column; i++) {
+            std::string s = items[item].key;
+            pad_to_width(s, key_width);
+            s.append(" ");
+            s.append(items[item].text);
+            pad_to_width(s, key_width + 1 + text_width);
+            texts.push_back(s);
+
+            item++;
+        }
+        column_texts.push_back(texts);
+    }
+
+    std::string to_show;
+    for(size_t i=0; i<rows_per_column; i++) {
+        for(size_t column=0; column<text_columns; column++) {
+            if(i >= column_texts[column].size())
+                continue;
+            to_show.append(column_texts[column][i]);
+            if(column+1 < text_columns)
+                to_show.append(" ");
+        }
+        to_show.append("\n");
+    }
+
+    message_box("Help", to_show.c_str());
+}
+
+static std::unordered_map<std::string, std::string> key_symbols = {
+    {"ArrowLeft", "←"},
+    {"ArrowUp", "↑"},
+    {"ArrowRight", "→"},
+    {"ArrowDown", "↓"},
+    {"Escape", "Esc"},
+};
+
+static std::string format_key(const action &action) {
+    std::string str;
+    if(action.modifier & TERMPAINT_MOD_CTRL)
+        str.append("C-");
+    if(action.modifier & TERMPAINT_MOD_ALT)
+        str.append("M-");
+    if(action.type == TERMPAINT_EV_KEY) {
+        auto it = key_symbols.find(action.string);
+        if(it == key_symbols.end())
+            str.append(action.string);
+        else
+            str.append(it->second);
+    } else {
+        str.append(action.string);
+    }
+    return str;
+}
+
+bool tui_handle_action(const Event &event, const std::vector<action> &actions)
+{
+    if(event.type == EV_TIMEOUT)
+        return false;
+
+    const auto it = std::find_if(actions.cbegin(), actions.cend(), [&](const action &a) {
+        return a.type == event.type
+                && a.string == event.string
+                && event.modifier == a.modifier;
+    });
+    if(it == actions.cend()) {
+        if(event.type == TERMPAINT_EV_KEY && event.string == "F1") {
+            std::vector<helpitem> items = {{"F1", "Display this help"}};
+            for(const action &action: actions) {
+                if(action.help.empty())
+                    continue;
+                items.push_back({format_key(action), action.help});
+            }
+            draw_help(items);
+            return true;
+        }
+        return false;
+    }
+    if(it->func)
+        it->func();
+    return true;
 }

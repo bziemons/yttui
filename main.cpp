@@ -132,128 +132,6 @@ void draw_no_channels_msg()
     }
 }
 
-static void pad_to_width(std::string &str, const size_t width)
-{
-    const size_t current = string_width(str);
-    str.append(width-current, ' ');
-}
-
-struct action
-{
-    int type;
-    std::string string;
-    int modifier;
-
-    std::function<void(void)> func;
-    const std::string help;
-};
-
-struct helpitem {
-    std::string key;
-    std::string text;
-};
-
-void draw_help(const std::vector<helpitem> &items)
-{
-    const size_t rows = termpaint_surface_height(surface);
-
-    const size_t rows_per_column = rows / 3 * 2;
-
-    std::vector<std::vector<std::string>> column_texts;
-
-    const size_t text_columns = 1 + items.size() / rows_per_column;
-
-    size_t item = 0;
-    for(size_t column=0; column<text_columns; column++) {
-        const size_t items_this_column = std::min(items.size() - item, rows_per_column);
-        std::vector<std::string> texts;
-        size_t key_width = 0;
-        size_t text_width = 0;
-        for(size_t i=0; i<items_this_column; i++) {
-            key_width = std::max(string_width(items[item + i].key), key_width);
-            text_width = std::max(string_width(items[item + i].text), text_width);
-        }
-        for(size_t i=0; i<items_this_column; i++) {
-            std::string s = items[item].key;
-            pad_to_width(s, key_width);
-            s.append(" ");
-            s.append(items[item].text);
-            pad_to_width(s, key_width + 1 + text_width);
-            texts.push_back(s);
-
-            item++;
-        }
-        column_texts.push_back(texts);
-    }
-
-    std::string to_show;
-    for(size_t i=0; i<rows_per_column; i++) {
-        for(size_t column=0; column<text_columns; column++) {
-            if(i >= column_texts[column].size())
-                continue;
-            to_show.append(column_texts[column][i]);
-            if(column+1 < text_columns)
-                to_show.append(" ");
-        }
-        to_show.append("\n");
-    }
-
-    message_box("Help", to_show.c_str());
-}
-
-static std::unordered_map<std::string, std::string> key_symbols = {
-    {"ArrowLeft", "←"},
-    {"ArrowUp", "↑"},
-    {"ArrowRight", "→"},
-    {"ArrowDown", "↓"},
-    {"Space", "[Space]"},
-};
-
-std::string format_key(const action &action) {
-    std::string str;
-    if(action.modifier & TERMPAINT_MOD_CTRL)
-        str.append("C-");
-    if(action.modifier & TERMPAINT_MOD_ALT)
-        str.append("M-");
-    if(action.type == TERMPAINT_EV_KEY) {
-        auto it = key_symbols.find(action.string);
-        if(it == key_symbols.end())
-            str.append(action.string);
-        else
-            str.append(it->second);
-    } else {
-        str.append(action.string);
-    }
-    return str;
-}
-
-bool handle_action(const Event &event, const std::vector<action> &actions)
-{
-    if(event.type == EV_TIMEOUT)
-        return false;
-
-    const auto it = std::find_if(actions.cbegin(), actions.cend(), [&](const action &a) {
-        return a.type == event.type
-                && a.string == event.string
-                && event.modifier == a.modifier;
-    });
-    if(it == actions.cend()) {
-        if(event.type == TERMPAINT_EV_KEY && event.string == "F1") {
-            std::vector<helpitem> items = {{"F1", "Display this help"}};
-            for(const action &action: actions) {
-                if(action.help.empty())
-                    continue;
-                items.push_back({format_key(action), action.help});
-            }
-            draw_help(items);
-        }
-        return false;
-    }
-    if(it->func)
-        it->func();
-    return true;
-}
-
 sqlite3 *db;
 
 void load_videos_for_channel(const std::string &channelId, bool force=false)
@@ -623,7 +501,7 @@ int main()
         if(!event)
             abort();
 
-        handle_action(*event, actions);
+        tui_handle_action(*event, actions);
     } while (!exit);
 
     tp_shutdown();

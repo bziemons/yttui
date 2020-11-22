@@ -2,6 +2,7 @@
 
 #include <termpaintx.h>
 #define EV_TIMEOUT 0xffff
+#define EV_IGNORE 0xfffe
 
 #include <functional>
 #include <optional>
@@ -57,6 +58,17 @@ extern void tp_flush();
 extern void tp_pause();
 extern void tp_unpause();
 extern std::optional<Event> tp_wait_for_event();
+
+struct action
+{
+    int type;
+    std::string string;
+    int modifier;
+
+    std::function<void(void)> func;
+    std::string help;
+};
+extern bool tui_handle_action(const Event &event, const std::vector<action> &actions);
 
 extern size_t string_width(const std::string &str);
 extern std::pair<size_t, size_t> string_size(const std::string &str);
