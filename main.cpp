@@ -198,7 +198,7 @@ void add_channel_to_list(Channel &channel)
     }
 }
 
-void handle_add_channel_by_name()
+void action_add_channel_by_name()
 {
     std::string channel_name = get_string("Add new Channel", "Enter channel name");
     if(channel_name.empty()) {
@@ -221,7 +221,7 @@ void handle_add_channel_by_name()
     }
 }
 
-void handle_add_channel_by_id()
+void action_add_channel_by_id()
 {
     std::string channel_id = get_string("Add new Channel", "Enter channel ID");
     if(channel_id.empty()) {
@@ -242,27 +242,6 @@ void handle_add_channel_by_id()
             message_box("Can't add channel", "There is no channel with this ID!");
         }
     }
-}
-
-void handle_watch_video(Video &video, bool mark_only) {
-    const std::string url = "https://youtube.com/watch?v=";
-    const std::string cmd = "xdg-open \"" + url + video.id + "\" > /dev/null";
-    if(!mark_only) {
-        int rc = system(cmd.c_str());
-        if(rc)
-            message_box("Failed to open browser", ("xdg-open failed with error " + std::to_string(rc)).c_str());
-    }
-    video.set_flag(db, kWatched);
-}
-
-void handle_mark_all_videos_watched(Channel &channel) {
-    {
-        db_transaction transaction;
-        for(Video &video: videos[channel.id]) {
-            video.set_flag(db, kWatched);
-        }
-    }
-    channel.load_info(db);
 }
 
 void action_select_channel() {
@@ -324,7 +303,13 @@ void action_mark_all_videos_watched() {
     Channel &ch = channels[*selected_channel];
     if(message_box("Mark all as watched", ("Do you want to mark all videos of " + ch.name + " as watched?").c_str(), Button::Yes | Button::No, Button::No) != Button::Yes)
         return;
-    handle_mark_all_videos_watched(ch);
+    {
+        db_transaction transaction;
+        for(Video &video: videos[ch.id]) {
+            video.set_flag(db, kWatched);
+        }
+    }
+    ch.load_info(db);
 }
 
 void action_select_prev_channel() {
@@ -451,8 +436,8 @@ int main()
 
     bool exit = false;
     std::vector<action> actions = {
-        {TERMPAINT_EV_CHAR, "a", 0, handle_add_channel_by_name, "Add channel by name"},
-        {TERMPAINT_EV_CHAR, "A", 0, handle_add_channel_by_id, "Add channel by Id"},
+        {TERMPAINT_EV_CHAR, "a", 0, action_add_channel_by_name, "Add channel by name"},
+        {TERMPAINT_EV_CHAR, "A", 0, action_add_channel_by_id, "Add channel by Id"},
         {TERMPAINT_EV_CHAR, "c", 0, action_select_channel, "Select channel"},
         {TERMPAINT_EV_CHAR, "j", 0, action_select_prev_channel, "Select previous channel"},
         {TERMPAINT_EV_CHAR, "k", 0, action_select_next_channel, "Select next channel"},
