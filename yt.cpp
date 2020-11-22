@@ -5,16 +5,10 @@
 #include <curl/curl.h>
 
 #include "tui.h"
-
-#define SC(x) { const int res = (x); if(res != SQLITE_OK && res != SQLITE_ROW && res != SQLITE_DONE) { tui_abort("Database error:\n%s failed: (%d) %s", #x, res, sqlite3_errstr(res)); }}
+#include "db.h"
 
 using json = nlohmann::json;
 struct yt_config yt_config;
-
-static std::string get_string(sqlite3_stmt *row, int col)
-{
-    return std::string((char*)sqlite3_column_text(row, col));
-}
 
 static size_t curl_writecallback(void *data, size_t size, size_t nmemb, void *userp)
 {

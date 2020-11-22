@@ -11,11 +11,13 @@ DEPENDPATH += $$PWD/termpaint
 unix:!macx: PRE_TARGETDEPS += $$PWD/termpaint/libtermpaint.a
 
 SOURCES += \
+        db.cpp \
         main.cpp \
         tui.cpp \
         yt.cpp
 
 HEADERS += \
+    db.h \
     tui.h \
     yt.h
 

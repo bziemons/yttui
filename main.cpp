@@ -2,6 +2,7 @@
 
 #include "tui.h"
 #include "yt.h"
+#include "db.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -15,7 +16,6 @@
 
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
-#include <sqlite3.h>
 
 static std::string user_home;
 
@@ -29,8 +29,6 @@ size_t videos_per_page = 0;
 size_t current_page_count = 0;
 size_t title_offset = 0;
 bool any_title_in_next_half = false;
-
-#define SC(x) { const int res = (x); if(res != SQLITE_OK && res != SQLITE_ROW && res != SQLITE_DONE) { tui_abort("Database error:\n%s failed: (%d) %s", #x, res, sqlite3_errstr(res)); }}
 
 static termpaint_attr* get_attr(const AttributeSetType type, const bool highlight=false)
 {
@@ -131,8 +129,6 @@ void draw_no_channels_msg()
         write_multiline_string((cols - size.first) / 2, (rows - size.second) / 2, text, get_attr(ASNormal));
     }
 }
-
-sqlite3 *db;
 
 void load_videos_for_channel(const std::string &channelId, bool force=false)
 {
@@ -415,6 +411,8 @@ bool save_json(const std::string &filename, const json &data) {
     }
 }
 
+std::string database_filename = "yttool.sqlite";
+
 int main()
 {
     user_home = std::string(std::getenv("HOME"));
@@ -448,9 +446,13 @@ int main()
                 }
             }
         }
+        if(config.contains("database") && config["database"].is_string()) {
+            database_filename = config["database"];
+        }
     }
 
-    sqlite3_open("yttool.sqlite", &db);
+    SC(sqlite3_open(database_filename.c_str(), &db));
+    db_check_schema();
 
     sqlite3_stmt *query;
     sqlite3_prepare_v2(db, "SELECT * FROM channels;", -1, &query, nullptr);
