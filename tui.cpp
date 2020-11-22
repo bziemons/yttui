@@ -124,6 +124,24 @@ static void resolve_align(const Align align, const int width, const int height, 
         y = ymax - height;
 }
 
+class surface_backup
+{
+    int x, y;
+    int w, h;
+    termpaint_surface *backup;
+public:
+    surface_backup(int x, int y, int w, int h): x(x), y(y), w(w), h(h), backup(termpaint_surface_new_surface(surface, w, h))
+    {
+        termpaint_surface_copy_rect(surface, x, y, w, h, backup, 0, 0, TERMPAINT_COPY_NO_TILE, TERMPAINT_COPY_NO_TILE);
+    }
+    ~surface_backup()
+    {
+        termpaint_surface_copy_rect(backup, 0, 0, w, h, surface, x, y, TERMPAINT_COPY_NO_TILE, TERMPAINT_COPY_NO_TILE);
+        termpaint_surface_free(backup);
+    }
+
+};
+
 static void draw_box_with_caption(int x, int y, int w, int h, const std::string &caption=std::string())
 {
     termpaint_surface_clear_rect(surface, x, y, w, h, TERMPAINT_DEFAULT_COLOR, TERMPAINT_DEFAULT_COLOR);
@@ -172,6 +190,7 @@ int get_selection(const std::string &caption, const std::vector<std::string> &en
 
         int x, y;
         resolve_align(align, cols_needed, rows_needed, 0, cols, 0, rows, x, y);
+        surface_backup backup(x, y, cols_needed, rows_needed);
 
         draw_box_with_caption(x, y, cols_needed, rows_needed, caption);
         int yy = y+1;
@@ -230,6 +249,7 @@ std::string get_string(const std::string &caption, const std::string &text, cons
 
     int x, y;
     resolve_align(align, cols_needed, rows_needed, 0, cols, 0, rows, x, y);
+    surface_backup backup(x, y, cols_needed, rows_needed);
 
     const int input_row = y + 1 + !text.empty();
 
@@ -373,6 +393,7 @@ Button message_box(const std::string &caption, const std::string &text, const Bu
         const size_t rows = termpaint_surface_height(surface);
         int x, y;
         resolve_align(align, cols_needed, rows_needed, 0, cols, 0, rows, x, y);
+        surface_backup backup(x, y, cols_needed, rows_needed);
 
         draw_box_with_caption(x, y, cols_needed, rows_needed, caption);
 
