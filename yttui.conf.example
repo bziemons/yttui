@@ -1,0 +1,6 @@
+{
+    "apiKey": "YOUR_API_KEY",
+    "extraHeaders": [
+        {"key": "x-extra", "value": "heder"}
+    ]
+}

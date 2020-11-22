@@ -1,0 +1,4 @@
+*.conf
+*.sqlite
+*.pro.user
+build-*/
