@@ -183,6 +183,7 @@ int get_selection(const std::string &caption, const std::vector<std::string> &en
         {TERMPAINT_EV_KEY, "ArrowUp", 0, [&](){ if(selected > 0) selected--; }, "Previous option"},
         {TERMPAINT_EV_KEY, "ArrowDown", 0, [&](){ if(selected < entries.size() - 1) selected++; }, "Next option"},
         {TERMPAINT_EV_KEY, "Escape", 0, [&](){ selected = -1; done = true; }, "Abort selection"},
+        {TERMPAINT_EV_KEY, "Enter", 0, [&](){ done = true; }, "Confirm selection"},
         {EV_IGNORE, "1..9", 0, nullptr, "Select option 1..9"},
     };
 
