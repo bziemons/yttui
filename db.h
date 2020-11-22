@@ -16,7 +16,8 @@ public:
 };
 std::string get_string(sqlite3_stmt *row, int col);
 
-void db_check_schema();
+void db_init(const std::string &filename);
+void db_shutdown();
 
 std::string db_get_setting(const std::string &key);
 void db_set_setting(const std::string &key, const std::string &value);

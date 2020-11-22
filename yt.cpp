@@ -104,6 +104,20 @@ Channel Channel::add(sqlite3 *db, const std::string &selector, const std::string
     return Channel(channel_id, channel_name);
 }
 
+std::vector<Channel> Channel::get_all(sqlite3 *db)
+{
+    std::vector<Channel> channels;
+
+    sqlite3_stmt *query;
+    SC(sqlite3_prepare_v2(db, "SELECT * FROM channels;", -1, &query, nullptr));
+    while(sqlite3_step(query) == SQLITE_ROW) {
+        channels.emplace_back(query);
+    }
+    SC(sqlite3_finalize(query));
+
+    return channels;
+}
+
 std::string Channel::upload_playlist() const
 {
     return "UU" + id.substr(2);
@@ -255,4 +269,21 @@ void Video::set_flag(sqlite3 *db, VideoFlag flag, bool value)
     SC(sqlite3_bind_text(query, 2, id.c_str(), -1, SQLITE_TRANSIENT));
     SC(sqlite3_step(query));
     SC(sqlite3_finalize(query));
+}
+
+std::vector<Video> Video::get_all_for_channel(const std::string &channel_id)
+{
+    std::vector<Video> videos;
+
+    sqlite3_stmt *query;
+    SC(sqlite3_prepare_v2(db, "SELECT * FROM videos WHERE channelId=?1 ORDER BY published DESC;", -1, &query, nullptr));
+    SC(sqlite3_bind_text(query, 1, channel_id.c_str(), -1, SQLITE_TRANSIENT));
+
+    while(sqlite3_step(query) == SQLITE_ROW) {
+        videos.emplace_back(query);
+        Video video(query);
+    }
+    SC(sqlite3_finalize(query));
+
+    return videos;
 }

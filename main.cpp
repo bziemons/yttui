@@ -134,21 +134,15 @@ void load_videos_for_channel(const std::string &channelId, bool force=false)
 {
     if(videos.find(channelId) != videos.end() && !force)
         return;
+
     std::vector<Video> &channelVideos = videos[channelId];
-    channelVideos.clear();
+    channelVideos = Video::get_all_for_channel(channelId);
+    for(Video &video: channelVideos) {
+        video.tui_title_width = string_width(video.title);
+    }
+
     if(channels[*selected_channel].id == channelId)
         selected_video = 0;
-
-    sqlite3_stmt *query;
-    SC(sqlite3_prepare_v2(db, "SELECT * FROM videos WHERE channelId=?1 ORDER BY published DESC;", -1, &query, nullptr));
-
-    SC(sqlite3_bind_text(query, 1, channelId.c_str(), -1, SQLITE_TRANSIENT));
-    while(sqlite3_step(query) == SQLITE_ROW) {
-        Video video(query);
-        video.tui_title_width = string_width(video.title);
-        channelVideos.push_back(video);
-    }
-    SC(sqlite3_finalize(query));
 }
 
 void fetch_videos_for_channel(Channel &ch, bool name_in_title=false)
@@ -447,16 +441,10 @@ int main()
         database_filename = config["database"];
     }
 
-    SC(sqlite3_open(database_filename.c_str(), &db));
-    db_check_schema();
-
-    sqlite3_stmt *query;
-    sqlite3_prepare_v2(db, "SELECT * FROM channels;", -1, &query, nullptr);
-    while(sqlite3_step(query) == SQLITE_ROW) {
-        Channel channel(query);
+    db_init(database_filename);
+    for(Channel &channel: Channel::get_all(db)) {
         add_channel_to_list(channel);
     }
-    sqlite3_finalize(query);
 
     if(channels.size())
         select_channel_by_index(0);
@@ -503,7 +491,7 @@ int main()
     } while (!exit);
 
     tp_shutdown();
-    sqlite3_close(db);
+    db_shutdown();
     curl_global_cleanup();
 
     return 0;

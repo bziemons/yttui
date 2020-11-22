@@ -17,6 +17,20 @@ std::string get_string(sqlite3_stmt *row, int col)
     return std::string((char*)sqlite3_column_text(row, col));
 }
 
+void db_check_schema();
+
+void db_init(const std::string &filename)
+{
+    SC(sqlite3_open(filename.c_str(), &db));
+    db_check_schema();
+}
+
+void db_shutdown()
+{
+    sqlite3_close(db);
+    db = nullptr;
+}
+
 void db_check_schema() {
     bool settings_table_found = false;
 
