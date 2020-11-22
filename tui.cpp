@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include <stdarg.h>
+
 termpaint_integration *integration;
 termpaint_terminal *terminal;
 termpaint_surface *surface;
@@ -665,4 +667,28 @@ bool tui_handle_action(const Event &event, const std::vector<action> &actions)
     if(it->func)
         it->func();
     return true;
+}
+
+void tui_abort(const char *fmt, ...)
+{
+    va_list ap, ap2;
+    va_start(ap, fmt);
+    va_copy(ap2, ap);
+    int required = vsnprintf(nullptr, 0, fmt, ap);
+    va_end(ap);
+    if(required < 0) {
+        va_end(ap2);
+        abort();
+    }
+    std::vector<char> buffer(required + 1, 0);
+    int written = vsnprintf(buffer.data(), required + 1, fmt, ap2);
+    if(written != required) {
+        va_end(ap2);
+        abort();
+    }
+    const std::string message(buffer.data());
+    const size_t cols = termpaint_surface_width(surface);
+
+    message_box("Error", simple_wrap(message, cols/2));
+    exit(1);
 }

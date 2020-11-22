@@ -30,7 +30,7 @@ size_t current_page_count = 0;
 size_t title_offset = 0;
 bool any_title_in_next_half = false;
 
-#define SC(x) { const int res = (x); if(res != SQLITE_OK && res != SQLITE_ROW && res != SQLITE_DONE) { fprintf(stderr, "%s failed: (%d) %s\n", #x, res, sqlite3_errstr(res)); std::abort(); }}
+#define SC(x) { const int res = (x); if(res != SQLITE_OK && res != SQLITE_ROW && res != SQLITE_DONE) { tui_abort("Database error:\n%s failed: (%d) %s", #x, res, sqlite3_errstr(res)); }}
 
 static termpaint_attr* get_attr(const AttributeSetType type, const bool highlight=false)
 {

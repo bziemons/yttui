@@ -84,3 +84,4 @@ extern void update_progress(progress_info *info, const int val, const int maxval
 extern void end_progress(progress_info *info);
 
 extern void tui_abort(std::string message);
+extern void tui_abort(const char *fmt, ...);

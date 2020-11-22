@@ -6,7 +6,7 @@
 
 #include "tui.h"
 
-#define SC(x) { const int res = (x); if(res != SQLITE_OK && res != SQLITE_ROW && res != SQLITE_DONE) { fprintf(stderr, "%s failed: (%d) %s\n", #x, res, sqlite3_errstr(res)); std::abort(); }}
+#define SC(x) { const int res = (x); if(res != SQLITE_OK && res != SQLITE_ROW && res != SQLITE_DONE) { tui_abort("Database error:\n%s failed: (%d) %s", #x, res, sqlite3_errstr(res)); }}
 
 using json = nlohmann::json;
 struct yt_config yt_config;
