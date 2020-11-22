@@ -158,7 +158,7 @@ void Channel::fetch_new_videos(sqlite3 *db, progress_info *info, std::optional<s
         {"key", yt_config.api_key},
     };
 
-    sqlite3_exec(db, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr);
+    db_transaction transaction;
 
     int processed = 0;
     bool abort = false;
@@ -210,8 +210,6 @@ void Channel::fetch_new_videos(sqlite3 *db, progress_info *info, std::optional<s
             break;
         }
     }
-
-    sqlite3_exec(db, "COMMIT TRANSACTION;", nullptr, nullptr, nullptr);
 }
 
 void Channel::load_info(sqlite3 *db)

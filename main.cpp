@@ -262,11 +262,12 @@ void handle_watch_video(Video &video, bool mark_only) {
 }
 
 void handle_mark_all_videos_watched(Channel &channel) {
-    sqlite3_exec(db, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr);
-    for(Video &video: videos[channel.id]) {
-        video.set_flag(db, kWatched);
+    {
+        db_transaction transaction;
+        for(Video &video: videos[channel.id]) {
+            video.set_flag(db, kWatched);
+        }
     }
-    sqlite3_exec(db, "COMMIT TRANSACTION;", nullptr, nullptr, nullptr);
     channel.load_info(db);
 }
 
