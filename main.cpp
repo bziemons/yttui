@@ -427,10 +427,7 @@ int main()
         auto config_data = load_json(config_file);
         if(config_data) {
             config = *config_data;
-            fprintf(stderr, "Using config file %s...\n", config_file.c_str());
             break;
-        } else {
-            fprintf(stderr, "Can't read config file %s...\n", config_file.c_str());
         }
     }
     if(config.contains("apiKey") && config["apiKey"].is_string()) {
