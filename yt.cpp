@@ -217,7 +217,7 @@ void Channel::fetch_new_videos(sqlite3 *db, progress_info *info, std::optional<s
         if(info)
             update_progress(info, processed, results);
 
-        if(!abort && response.contains("nextPageToken")) {
+        if(!abort && response.count("nextPageToken")) {
             params["pageToken"] = response["nextPageToken"];
             //fprintf(stderr, "Processed %d. Next page...\r\n", processed);
         } else {

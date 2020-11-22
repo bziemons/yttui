@@ -410,19 +410,19 @@ int main()
             break;
         }
     }
-    if(config.contains("apiKey") && config["apiKey"].is_string()) {
+    if(config.count("apiKey") && config["apiKey"].is_string()) {
         yt_config.api_key = config["apiKey"];
     } else {
         tui_abort("A YouTube API key is required for this application to function.\n  Please provide one in the config file.");
     }
-    if(config.contains("extraHeaders") && config["extraHeaders"].is_array()) {
+    if(config.count("extraHeaders") && config["extraHeaders"].is_array()) {
         for(const json &elem: config["extraHeaders"]) {
-            if(elem.contains("key") && elem["key"].is_string() && elem.contains("value") && elem["value"].is_string()) {
+            if(elem.count("key") && elem["key"].is_string() && elem.count("value") && elem["value"].is_string()) {
                 yt_config.extra_headers.emplace(elem["key"], elem["value"]);
             }
         }
     }
-    if(config.contains("database") && config["database"].is_string()) {
+    if(config.count("database") && config["database"].is_string()) {
         database_filename = config["database"];
     }
 
