@@ -26,7 +26,7 @@ enum class Align {
 
     Center = HCenter | VCenter,
 };
-extern Align operator|(const Align &a, const Align &b);
+Align operator|(const Align &a, const Align &b);
 
 extern termpaint_surface *surface;
 
@@ -49,15 +49,15 @@ enum class Button {
     Yes = (1<<2),
     No = (1<<3),
 };
-extern Button operator|(const Button &a, const Button &b);
-extern Button operator&(const Button &a, const Button &b);
+Button operator|(const Button &a, const Button &b);
+Button operator&(const Button &a, const Button &b);
 
-extern void tp_init();
-extern void tp_shutdown();
-extern void tp_flush();
-extern void tp_pause();
-extern void tp_unpause();
-extern std::optional<Event> tp_wait_for_event();
+void tp_init();
+void tp_shutdown();
+void tp_flush();
+void tp_pause();
+void tp_unpause();
+std::optional<Event> tp_wait_for_event();
 
 struct action
 {
@@ -68,20 +68,20 @@ struct action
     std::function<void(void)> func;
     std::string help;
 };
-extern bool tui_handle_action(const Event &event, const std::vector<action> &actions);
+bool tui_handle_action(const Event &event, const std::vector<action> &actions);
 
-extern size_t string_width(const std::string &str);
-extern std::pair<size_t, size_t> string_size(const std::string &str);
-extern void write_multiline_string(const int x, const int y, const std::string &str, termpaint_attr *attr);
+size_t string_width(const std::string &str);
+std::pair<size_t, size_t> string_size(const std::string &str);
+void write_multiline_string(const int x, const int y, const std::string &str, termpaint_attr *attr);
 
-extern Button message_box(const std::string &caption, const std::string &text, const Button buttons=Button::Ok, const Button default_button=Button::Ok, const Align align=Align::Center);
-extern int get_selection(const std::string &caption, const std::vector<std::string> &choices, size_t selected=0, const Align align=Align::Center);
-extern std::string get_string(const std::string &caption, const std::string &text=std::string(), const Align align=Align::Center);
+Button message_box(const std::string &caption, const std::string &text, const Button buttons=Button::Ok, const Button default_button=Button::Ok, const Align align=Align::Center);
+int get_selection(const std::string &caption, const std::vector<std::string> &choices, size_t selected=0, const Align align=Align::Center);
+std::string get_string(const std::string &caption, const std::string &text=std::string(), const Align align=Align::Center);
 
 struct progress_info;
-extern progress_info* begin_progress(const std::string &caption, const int width, const Align align=Align::Center);
-extern void update_progress(progress_info *info, const int val, const int maxval);
-extern void end_progress(progress_info *info);
+progress_info* begin_progress(const std::string &caption, const int width, const Align align=Align::Center);
+void update_progress(progress_info *info, const int val, const int maxval);
+void end_progress(progress_info *info);
 
-extern void tui_abort(std::string message);
-extern void tui_abort(const char *fmt, ...);
+void tui_abort(std::string message);
+void tui_abort(const char *fmt, ...);
