@@ -73,6 +73,7 @@ bool tui_handle_action(const Event &event, const std::vector<action> &actions);
 size_t string_width(const std::string &str);
 std::pair<size_t, size_t> string_size(const std::string &str);
 void write_multiline_string(const int x, const int y, const std::string &str, termpaint_attr *attr);
+std::string text_wrap(const std::string &text, const size_t desired_width);
 
 Button message_box(const std::string &caption, const std::string &text, const Button buttons=Button::Ok, const Button default_button=Button::Ok, const Align align=Align::Center);
 int get_selection(const std::string &caption, const std::vector<std::string> &choices, size_t selected=0, const Align align=Align::Center);

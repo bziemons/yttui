@@ -553,20 +553,51 @@ void write_multiline_string(const int x, const int y, const std::string &str, te
     }
 }
 
-static std::string simple_wrap(const std::string &text, const size_t desired_width)
+std::string text_wrap(const std::string &text, const size_t desired_width)
 {
     std::string out;
-    size_t current_line_width = 0;
-    for(const std::string &word: split(text, ' ')) {
-        size_t w = string_width(word);
-        if(current_line_width + w < desired_width) {
-            out.append(word).append(" ");
+    termpaint_text_measurement *m = termpaint_text_measurement_new(surface);
+    size_t cur = 0;
+    size_t next = 0;
+    do {
+        next = text.find('\n', cur);
+        const std::string part = text.substr(cur, next - cur);
+        termpaint_text_measurement_reset(m);
+        termpaint_text_measurement_set_limit_width(m, desired_width);
+        if(termpaint_text_measurement_feed_utf8(m, part.data(), part.size(), true)) {
+            // Line doesn't fit as a whole
+            size_t partpos = 0;
+            do {
+                size_t fitting_bytes = termpaint_text_measurement_last_ref(m);
+                bool adjust = part[partpos + fitting_bytes - 1] != ' ';
+                if(adjust && partpos + fitting_bytes < part.size()) { // If we're inside the part only adjust if the last fitting char isn't the word boundary
+                    adjust = part[partpos + fitting_bytes] != ' ' && part[partpos + fitting_bytes] != '\n';
+                } else { // Don't adjust at the end of the part
+                    adjust = false;
+                }
+                while(adjust && part[partpos + fitting_bytes - 1] != ' ' && fitting_bytes > 0) { // If necessary scan backwards for a space.
+                    fitting_bytes--;
+                }
+                if(fitting_bytes == 0) { // Can't be soft broken.
+                    fitting_bytes = termpaint_text_measurement_last_ref(m); // Just get the last fitting character and hard break
+                    adjust = false;
+                }
+                const std::string fragment = part.substr(partpos, fitting_bytes - adjust);
+                out.append(fragment).append("\n");
+                partpos += fitting_bytes;
+                termpaint_text_measurement_reset(m);
+                termpaint_text_measurement_set_limit_width(m, desired_width);
+                termpaint_text_measurement_feed_utf8(m, part.data() + partpos, part.size() - partpos + 1, partpos == part.size() - 1);
+            } while(partpos != part.size());
         } else {
-            current_line_width = 0;
-            out.append("\n").append(word).append(" ");
+            // Line fits as-is.
+            out.append(part).append("\n");
         }
-        current_line_width += w + 1;
-    }
+        cur = next + 1;
+    } while(next != std::string::npos);
+    termpaint_text_measurement_free(m);
+    if(out.back() == '\n' && text.back() != '\n')
+        out.pop_back();
     return out;
 }
 
@@ -574,7 +605,7 @@ void tui_abort(std::string message)
 {
     const size_t cols = termpaint_surface_width(surface);
 
-    message_box("Error", simple_wrap(message, cols/2));
+    message_box("Error", text_wrap(message, cols/2));
     exit(1);
 }
 
@@ -703,6 +734,6 @@ void tui_abort(const char *fmt, ...)
     const std::string message(buffer.data());
     const size_t cols = termpaint_surface_width(surface);
 
-    message_box("Error", simple_wrap(message, cols/2));
+    message_box("Error", text_wrap(message, cols*0.75f));
     exit(1);
 }
