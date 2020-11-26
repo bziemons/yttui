@@ -451,9 +451,10 @@ int main()
     curl_global_init(CURL_GLOBAL_ALL);
     tp_init();
 
+    std::string config_file;
     nlohmann::json config;
     for(const std::string &location: config_locations) {
-        std::string config_file(location + "yttui.conf");
+        config_file = location + "/yttui.conf";
         auto config_data = load_json(config_file);
         if(config_data) {
             config = *config_data;
@@ -463,7 +464,7 @@ int main()
     if(config.count("apiKey") && config["apiKey"].is_string()) {
         yt_config.api_key = config["apiKey"];
     } else {
-        tui_abort("A YouTube API key is required for this application to function.\n  Please provide one in the config file.");
+        tui_abort("A YouTube API key is required for this application to function.\nPlease provide one in the config file.\n\nCurrent config file:\n" + config_file);
     }
     if(config.count("extraHeaders") && config["extraHeaders"].is_array()) {
         for(const json &elem: config["extraHeaders"]) {
