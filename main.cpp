@@ -22,13 +22,14 @@ static std::string user_home;
 std::vector<Channel> channels;
 std::unordered_map<std::string, std::vector<Video>> videos;
 
-std::optional<size_t> selected_channel;
+size_t selected_channel;
 size_t current_video_count = 0;
 size_t selected_video = 0;
 size_t videos_per_page = 0;
 size_t current_page_count = 0;
 size_t title_offset = 0;
 bool any_title_in_next_half = false;
+bool clear_channels_on_change = false;
 
 static termpaint_attr* get_attr(const AttributeSetType type, const bool highlight=false)
 {
@@ -58,7 +59,7 @@ void draw_channel_list(const std::vector<Video> &videos)
     const int pages = videos.size() / available_rows;
     const int cur_page = selected_video / available_rows;
 
-    const std::string channel_name = std::string("Channel: ") + channels[*selected_channel].name.c_str();
+    const std::string channel_name = std::string("Channel: ") + channels[selected_channel].name.c_str();
     termpaint_surface_write_with_attr(surface, 0, 0, channel_name.c_str(), get_attr(ASNormal));
 
     if(pages > 1) {
@@ -130,40 +131,67 @@ void draw_no_channels_msg()
     }
 }
 
-void load_videos_for_channel(const std::string &channelId, bool force=false)
+void load_videos_for_channel(const Channel &channel, bool force=false)
 {
-    if(videos.find(channelId) != videos.end() && !force)
+    if(!force && videos.find(channel.id) != videos.end() && !videos[channel.id].empty())
         return;
 
-    std::vector<Video> &channelVideos = videos[channelId];
-    channelVideos = Video::get_all_for_channel(channelId);
+    std::vector<Video> &channelVideos = videos[channel.id];
+    if(channel.is_virtual) {
+        channelVideos = Video::get_all_with_flag_value(channel.virtual_flag, channel.virtual_flag_value);
+    } else {
+        channelVideos = Video::get_all_for_channel(channel.id);
+    }
+
     for(Video &video: channelVideos) {
         video.tui_title_width = string_width(video.title);
     }
 
-    if(channels[*selected_channel].id == channelId)
+    if(channels[selected_channel].id == channel.id)
         selected_video = 0;
 }
 
-void fetch_videos_for_channel(Channel &ch, bool name_in_title=false)
+void fetch_videos_for_channel(Channel &channel, bool name_in_title=false)
 {
+    if(channel.is_virtual) {
+        std::vector<Video> &channelVideos = videos[channel.id];
+        channelVideos = Video::get_all_with_flag_value(channel.virtual_flag, channel.virtual_flag_value);
+        channel.video_count = channelVideos.size();
+        for(Video &video: channelVideos) {
+            video.tui_title_width = string_width(video.title);
+        }
+        return;
+    }
+
     std::string title("Refreshing");
     if(name_in_title)
-        title.append(" ").append(ch.name);
+        title.append(" ").append(channel.name);
     title.append("…");
     progress_info *info = begin_progress(title, 30);
-    ch.fetch_new_videos(db, info);
+    channel.fetch_new_videos(db, info);
     end_progress(info);
-    load_videos_for_channel(channels[*selected_channel].id, true);
-    ch.load_info(db);
+    load_videos_for_channel(channels[selected_channel], true);
+    channel.load_info(db);
+}
+
+bool startswith(const std::string &what, const std::string &with)
+{
+    const size_t len = with.length();
+    return what.substr(0, len) == with;
 }
 
 void select_channel_by_index(const int index) {
+    if(clear_channels_on_change) {
+        for(auto &[k, v]: videos) {
+            v.clear();
+        }
+    }
     selected_channel = index;
-    const Channel &channel = channels.at(*selected_channel);
+    const Channel &channel = channels.at(selected_channel);
     selected_video = 0;
     current_video_count = channel.video_count;
-    load_videos_for_channel(channel.id);
+    load_videos_for_channel(channel, clear_channels_on_change);
+    clear_channels_on_change = channel.is_virtual;
 }
 
 void select_channel_by_name(const std::string &channel_name) {
@@ -185,17 +213,27 @@ void add_channel_to_list(Channel &channel)
     channel.load_info(db);
 
     std::string selected_channel_id;
-    if(selected_channel) {
-        selected_channel_id = channels[*selected_channel].id;
-    }
-
+    if(selected_channel < channels.size())
+        selected_channel_id = channels[selected_channel].id;
     channels.push_back(channel);
-    std::sort(channels.begin(), channels.end(), [](const Channel &a, const Channel &b){ return a.name < b.name; });
 
-    if(selected_channel) {
+    std::sort(channels.begin(), channels.end(), [](const Channel &a, const Channel &b){ if(a.is_virtual != b.is_virtual) { return a.is_virtual > b.is_virtual; } return a.name < b.name; });
+
+    if(!selected_channel_id.empty()) {
         const size_t new_index = std::distance(channels.cbegin(), std::find_if(channels.cbegin(), channels.cend(), [&](const Channel &ch){ return ch.id == selected_channel_id; }));
         selected_channel = new_index;
     }
+}
+
+void make_virtual_unwatched_channel()
+{
+    Channel channel = Channel::add_virtual("All Unwatched", kWatched, false);
+    std::vector<Video> &channelVideos = videos[channel.id];
+    channelVideos = Video::get_all_with_flag_value(channel.virtual_flag, channel.virtual_flag_value);
+    for(Video &video: channelVideos) {
+        video.tui_title_width = string_width(video.title);
+    }
+    add_channel_to_list(channel);
 }
 
 void action_add_channel_by_name()
@@ -249,7 +287,7 @@ void action_select_channel() {
         std::vector<std::string> names;
         for(const Channel &c: channels)
             names.push_back(c.name + " (" + std::to_string(c.unwatched) + ")");
-        const int channel = get_selection("Switch Channel", names, *selected_channel, Align::VCenter | Align::Left);
+        const int channel = get_selection("Switch Channel", names, selected_channel, Align::VCenter | Align::Left);
         if(channel != -1)
             select_channel_by_index(channel);
     } else {
@@ -258,8 +296,7 @@ void action_select_channel() {
 }
 
 void action_refresh_channel() {
-    Channel &ch = channels[*selected_channel];
-    fetch_videos_for_channel(ch);
+    fetch_videos_for_channel(channels.at(selected_channel));
 }
 
 void action_refresh_all_channels() {
@@ -271,14 +308,14 @@ void action_refresh_all_channels() {
 }
 
 void action_mark_video_watched() {
-    Channel &ch = channels[*selected_channel];
+    Channel &ch = channels.at(selected_channel);
     Video &video = videos[ch.id][selected_video];
     video.set_flag(db, kWatched);
     ch.load_info(db);
 }
 
 void action_watch_video() {
-    Channel &ch = channels[*selected_channel];
+    Channel &ch = channels.at(selected_channel);
     Video &video = videos[ch.id][selected_video];
 
     const std::string url = "https://youtube.com/watch?v=";
@@ -293,14 +330,14 @@ void action_watch_video() {
 }
 
 void action_mark_video_unwatched() {
-    Channel &ch = channels[*selected_channel];
+    Channel &ch = channels.at(selected_channel);
     Video &selected = videos[ch.id][selected_video];
     selected.set_flag(db, kWatched, false);
     ch.load_info(db);
 }
 
 void action_mark_all_videos_watched() {
-    Channel &ch = channels[*selected_channel];
+    Channel &ch = channels.at(selected_channel);
     if(message_box("Mark all as watched", ("Do you want to mark all videos of " + ch.name + " as watched?").c_str(), Button::Yes | Button::No, Button::No) != Button::Yes)
         return;
     {
@@ -313,13 +350,13 @@ void action_mark_all_videos_watched() {
 }
 
 void action_select_prev_channel() {
-    if(selected_channel && *selected_channel > 0)
-        select_channel_by_index(*selected_channel - 1);
+    if(selected_channel > 0)
+        select_channel_by_index(selected_channel - 1);
 }
 
 void action_select_next_channel() {
-    if(selected_channel && *selected_channel < channels.size() - 1)
-        select_channel_by_index(*selected_channel + 1);
+    if(selected_channel < channels.size() - 1)
+        select_channel_by_index(selected_channel + 1);
 }
 
 void action_select_prev_video() {
@@ -427,6 +464,7 @@ int main()
     }
 
     db_init(database_filename);
+    make_virtual_unwatched_channel();
     for(Channel &channel: Channel::get_all(db)) {
         add_channel_to_list(channel);
     }
@@ -464,10 +502,7 @@ int main()
 
     do {
         termpaint_surface_clear(surface, TERMPAINT_DEFAULT_COLOR, TERMPAINT_DEFAULT_COLOR);
-        if(selected_channel)
-            draw_channel_list(videos[channels.at(*selected_channel).id]);
-        else
-            draw_no_channels_msg();
+        draw_channel_list(videos[channels.at(selected_channel).id]);
         tp_flush(force_repaint);
         force_repaint = false;
 

@@ -66,11 +66,11 @@ static json api_request(const std::string &url, std::map<std::string, std::strin
     return {};
 }
 
-Channel::Channel(sqlite3_stmt *row): id(get_string(row, 0)), name(get_string(row, 1))
+Channel::Channel(sqlite3_stmt *row): id(get_string(row, 0)), name(get_string(row, 1)), is_virtual(false), virtual_flag(kNone), virtual_flag_value(false)
 {
 }
 
-Channel::Channel(const std::string &id, const std::string &name): id(id), name(name)
+Channel::Channel(const std::string &id, const std::string &name): id(id), name(name), is_virtual(false), virtual_flag(kNone), virtual_flag_value(false)
 {
 }
 
@@ -102,6 +102,17 @@ Channel Channel::add(sqlite3 *db, const std::string &selector, const std::string
     SC(sqlite3_finalize(query));
 
     return Channel(channel_id, channel_name);
+}
+
+Channel Channel::add_virtual(const std::string &name, const VideoFlag virtual_flag, const bool virtual_flag_value)
+{
+    std::string id = name;
+    std::transform(id.begin(), id.end(), id.begin(), [](char c){ return std::isalnum(c) ? std::tolower(c) : '-'; });
+    Channel channel("virtual-" + id, name);
+    channel.is_virtual = true;
+    channel.virtual_flag = virtual_flag;
+    channel.virtual_flag_value = virtual_flag_value;
+    return channel;
 }
 
 std::vector<Channel> Channel::get_all(sqlite3 *db)
@@ -231,6 +242,10 @@ void Channel::load_info(sqlite3 *db)
     video_count = 0;
     unwatched = 0;
 
+    if(is_virtual) {
+        return;
+    }
+
     sqlite3_stmt *query;
     SC(sqlite3_prepare_v2(db, "SELECT flags, count(*) as videos FROM videos where channelId = ?1 GROUP by flags;", -1, &query, nullptr));
     SC(sqlite3_bind_text(query, 1, id.c_str(), -1, SQLITE_TRANSIENT));
@@ -245,17 +260,13 @@ void Channel::load_info(sqlite3 *db)
     SC(sqlite3_finalize(query));
 }
 
-void Channel::videos_watched(int count)
-{
-    unwatched -= count;
-}
-
 bool Channel::is_valid() const
 {
     return !id.empty() && !name.empty();
 }
 
-Video::Video(sqlite3_stmt *row): id(get_string(row, 0)), title(get_string(row, 2)), description(get_string(row, 3)), flags(sqlite3_column_int(row, 4)), published(get_string(row, 5))
+Video::Video(sqlite3_stmt *row): id(get_string(row, 0)), title(get_string(row, 2)), description(get_string(row, 3)),
+    flags(sqlite3_column_int(row, 4)), published(get_string(row, 5)), tui_title_width(0)
 {
 }
 
@@ -282,6 +293,24 @@ std::vector<Video> Video::get_all_for_channel(const std::string &channel_id)
     sqlite3_stmt *query;
     SC(sqlite3_prepare_v2(db, "SELECT * FROM videos WHERE channelId=?1 ORDER BY published DESC;", -1, &query, nullptr));
     SC(sqlite3_bind_text(query, 1, channel_id.c_str(), -1, SQLITE_TRANSIENT));
+
+    while(sqlite3_step(query) == SQLITE_ROW) {
+        videos.emplace_back(query);
+        Video video(query);
+    }
+    SC(sqlite3_finalize(query));
+
+    return videos;
+}
+
+std::vector<Video> Video::get_all_with_flag_value(const VideoFlag flag, const int value)
+{
+    std::vector<Video> videos;
+
+    sqlite3_stmt *query;
+    SC(sqlite3_prepare_v2(db, "SELECT * FROM videos WHERE flags & ?1 = ?2 ORDER BY published DESC;", -1, &query, nullptr));
+    SC(sqlite3_bind_int(query, 1, flag));
+    SC(sqlite3_bind_int(query, 2, value));
 
     while(sqlite3_step(query) == SQLITE_ROW) {
         videos.emplace_back(query);
