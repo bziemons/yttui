@@ -54,7 +54,7 @@ Button operator&(const Button &a, const Button &b);
 
 void tp_init();
 void tp_shutdown();
-void tp_flush();
+void tp_flush(const bool force=false);
 void tp_pause();
 void tp_unpause();
 std::optional<Event> tp_wait_for_event();

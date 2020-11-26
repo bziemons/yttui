@@ -435,6 +435,7 @@ int main()
         select_channel_by_index(0);
 
     bool exit = false;
+    bool force_repaint = false;
     std::vector<action> actions = {
         {TERMPAINT_EV_CHAR, "a", 0, action_add_channel_by_name, "Add channel by name"},
         {TERMPAINT_EV_CHAR, "A", 0, action_add_channel_by_id, "Add channel by Id"},
@@ -458,6 +459,7 @@ int main()
         {TERMPAINT_EV_KEY, "End", 0, action_select_last_video, "Last video"},
         {TERMPAINT_EV_KEY, "ArrowLeft", 0, action_scroll_title_left, "Scroll title left"},
         {TERMPAINT_EV_KEY, "ArrowRight", 0, action_scroll_title_right, "Scroll title right"},
+        {TERMPAINT_EV_CHAR, "l", TERMPAINT_MOD_CTRL, [&](){ force_repaint = true; }, "Force redraw"},
     };
 
     do {
@@ -466,7 +468,8 @@ int main()
             draw_channel_list(videos[channels.at(*selected_channel).id]);
         else
             draw_no_channels_msg();
-        tp_flush();
+        tp_flush(force_repaint);
+        force_repaint = false;
 
         auto event = tp_wait_for_event();
         if(!event)

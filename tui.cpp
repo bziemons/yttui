@@ -105,9 +105,9 @@ void tp_shutdown()
     termpaint_terminal_free_with_restore(terminal);
 }
 
-void tp_flush()
+void tp_flush(const bool force)
 {
-    termpaint_terminal_flush(terminal, false);
+    termpaint_terminal_flush(terminal, force);
 }
 
 std::optional<Event> tp_wait_for_event()
@@ -202,12 +202,14 @@ int get_selection(const std::string &caption, const std::vector<std::string> &en
     const int rows_needed = entries.size()+2; // Number of entries and top/bottom border
 
     bool done = false;
+    bool force_repaint = false;
     std::vector<action> actions = {
         {TERMPAINT_EV_KEY, "ArrowUp", 0, [&](){ if(selected > 0) selected--; }, "Previous option"},
         {TERMPAINT_EV_KEY, "ArrowDown", 0, [&](){ if(selected < entries.size() - 1) selected++; }, "Next option"},
         {TERMPAINT_EV_KEY, "Escape", 0, [&](){ selected = -1; done = true; }, "Abort selection"},
         {TERMPAINT_EV_KEY, "Enter", 0, [&](){ done = true; }, "Confirm selection"},
         {EV_IGNORE, "1..9", 0, nullptr, "Select option 1..9"},
+        {TERMPAINT_EV_CHAR, "l", TERMPAINT_MOD_CTRL, [&](){ force_repaint = true; }, "Force redraw"},
     };
 
     while (!done) {
@@ -227,7 +229,8 @@ int get_selection(const std::string &caption, const std::vector<std::string> &en
             termpaint_surface_write_with_attr(surface, x+2, yy++, e.c_str(), attr);
             cur_entry++;
         }
-        termpaint_terminal_flush(terminal, false);
+        termpaint_terminal_flush(terminal, force_repaint);
+        force_repaint = false;
 
         auto event = wait_for_event(integration, 0);
         if(!event)
@@ -285,6 +288,7 @@ std::string get_string(const std::string &caption, const std::string &text, cons
     termpaint_terminal_set_cursor_style(terminal, TERMPAINT_CURSOR_STYLE_BAR, true);
 
     bool done = false;
+    bool force_repaint = false;
     std::vector<action> actions = {
         {TERMPAINT_EV_KEY, "Home", 0, [&](){ input_pos = 0; }, "Go to beginning of input"},
         {TERMPAINT_EV_CHAR, "a", TERMPAINT_MOD_CTRL, [&](){ input_pos = 0; }, "Go to beginning of input"},
@@ -299,6 +303,7 @@ std::string get_string(const std::string &caption, const std::string &text, cons
 
         {TERMPAINT_EV_KEY, "Escape", 0, [&](){ input.clear(); done = true; }, "Abort input"},
         {TERMPAINT_EV_KEY, "Enter", 0, [&](){ done = true; }, "Confirm input"},
+        {TERMPAINT_EV_CHAR, "l", TERMPAINT_MOD_CTRL, [&](){ force_repaint = true; }, "Force redraw"},
     };
 
     while(!done) {
@@ -308,7 +313,8 @@ std::string get_string(const std::string &caption, const std::string &text, cons
         termpaint_surface_write_with_attr(surface, x + 1, input_row, input.c_str(), attributes[ASNormal].normal);
         termpaint_terminal_set_cursor_position(terminal, x + 1 + input_pos, input_row);
 
-        termpaint_terminal_flush(terminal, false);
+        termpaint_terminal_flush(terminal, force_repaint);
+        force_repaint = false;
 
         auto event = wait_for_event(integration, 0);
         if(!event)
@@ -389,16 +395,19 @@ Button message_box(const std::string &caption, const std::string &text, const Bu
     const size_t cols_needed = width + 4;
 
     bool done = false;
+    bool force_repaint = false;
     std::vector<action> actions;
     if(active_buttons.size() > 1) {
         actions = {
             {TERMPAINT_EV_KEY, "Enter", 0, [&](){ done = true; }, "Confirm Selection"},
             {TERMPAINT_EV_KEY, "ArrowLeft", 0, [&](){ if(selected_button > 0) selected_button--;}, "Previous option"},
             {TERMPAINT_EV_KEY, "ArrowRight", 0, [&](){ if(selected_button < active_buttons.size() - 1) selected_button++; }, "Next option"},
+            {TERMPAINT_EV_CHAR, "l", TERMPAINT_MOD_CTRL, [&](){ force_repaint = true; }, "Force redraw"},
         };
     } else {
         actions = {
             {TERMPAINT_EV_KEY, "Enter", 0, [&](){ done = true; }, "Close dialog"},
+            {TERMPAINT_EV_CHAR, "l", TERMPAINT_MOD_CTRL, [&](){ force_repaint = true; }, "Force redraw"},
         };
     }
 
@@ -427,7 +436,8 @@ Button message_box(const std::string &caption, const std::string &text, const Bu
             button_x += active_buttons[btn].width + 2 + 1;
         }
 
-        termpaint_terminal_flush(terminal, false);
+        termpaint_terminal_flush(terminal, force_repaint);
+        force_repaint = false;
 
         auto event = wait_for_event(integration, 0);
         if(!event)
