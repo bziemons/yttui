@@ -11,7 +11,7 @@ This tool is work in progress and some functions might not work (correctly).
 * qmake
 * make
 * pkg-config
-* Installed (with development packages is appropriate) and accesible via pkg-config:
+* Installed (it may also be required to install separate development packages) and accesible via pkg-config:
     * [libcurl](https://curl.se)
     * [nlohman-json](https://github.com/nlohmann/json/) (at least version 3.5.0)
     * [sqlite3](https://sqlite.org)
