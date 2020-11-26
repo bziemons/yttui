@@ -164,10 +164,10 @@ void fetch_videos_for_channel(Channel &channel, bool name_in_title=false)
     channel.load_info(db);
 }
 
-bool startswith(const std::string &what, const std::string &with)
+bool startswith(const std::string &str, const std::string &with)
 {
     const size_t len = with.length();
-    return what.substr(0, len) == with;
+    return str.substr(0, len) == with;
 }
 
 std::string replace(const std::string &str, const std::string &what, const std::string &with)
@@ -509,7 +509,7 @@ int main()
         {TERMPAINT_EV_CHAR, "w", TERMPAINT_MOD_ALT, action_mark_video_watched, "Mark video as watched"},
         {TERMPAINT_EV_CHAR, "u", 0, action_mark_video_unwatched, "Mark video as unwatched"},
         {TERMPAINT_EV_CHAR, "W", 0, action_mark_all_videos_watched, "Mark channel as watched"},
-        {TERMPAINT_EV_CHAR, "q", TERMPAINT_MOD_CTRL, [&](){exit = true;}, "Quit"},
+        {TERMPAINT_EV_CHAR, "q", TERMPAINT_MOD_CTRL, [&](){ exit = true; }, "Quit"},
 
         {TERMPAINT_EV_KEY, "Space", 0, action_show_video_detail, "Show video details"},
         {TERMPAINT_EV_KEY, "ArrowUp", 0, action_select_prev_video, "Previous video"},
