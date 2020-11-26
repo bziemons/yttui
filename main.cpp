@@ -13,6 +13,7 @@
 #include <fstream>
 
 #include <time.h>
+#include <libgen.h>
 #include <stdio.h>
 
 #include <curl/curl.h>
@@ -441,16 +442,31 @@ bool save_json(const std::string &filename, const json &data) {
     }
 }
 
+static std::string get_module_path() {
+    std::string str;
+    char *exe = realpath("/proc/self/exe", nullptr);
+    if(exe) {
+        str = std::string(exe);
+        free(exe);
+        exe = nullptr;
+    } else {
+        perror("realpath");
+    }
+    exe = dirname((char*)str.c_str());
+
+    return std::string(exe);
+}
 
 int main()
 {
+    const std::string module_path = get_module_path();
     user_home = std::string(std::getenv("HOME"));
     std::string database_filename = user_home + "/.local/share/yttui.db";
-    std::vector<std::string> config_locations{user_home + "/.config/", "./"};
 
     curl_global_init(CURL_GLOBAL_ALL);
     tp_init();
 
+    const std::vector<std::string> config_locations{user_home + "/.config", module_path};
     std::string config_file;
     nlohmann::json config;
     for(const std::string &location: config_locations) {
