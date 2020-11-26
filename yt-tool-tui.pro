@@ -23,3 +23,7 @@ HEADERS += \
 
 unix: CONFIG += link_pkgconfig
 unix: PKGCONFIG += libcurl sqlite3 nlohmann_json
+
+DISTFILES += \
+    README.md \
+    yttui.conf.example
