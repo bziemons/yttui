@@ -441,11 +441,11 @@ bool save_json(const std::string &filename, const json &data) {
     }
 }
 
-std::string database_filename = "yttool.sqlite";
 
 int main()
 {
     user_home = std::string(std::getenv("HOME"));
+    std::string database_filename = user_home + "/.local/share/yttui.db";
     std::vector<std::string> config_locations{user_home + "/.config/", "./"};
 
     curl_global_init(CURL_GLOBAL_ALL);
@@ -473,7 +473,7 @@ int main()
         }
     }
     if(config.count("database") && config["database"].is_string()) {
-        database_filename = config["database"];
+        database_filename = replace(config["database"], "$HOME", user_home);
     }
     if(config.count("watchCommand") && config["watchCommand"].is_array()) {
         watch_command.clear();

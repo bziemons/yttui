@@ -3,5 +3,6 @@
     "extraHeaders": [
         {"key": "x-extra", "value": "heder"}
     ],
+    "database": "$HOME/yttui.db",
     "watchCommand": ["xdg-open", "https://youtube.com/watch?v={{vid}}"]
 }
