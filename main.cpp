@@ -43,10 +43,7 @@ void draw_channel_list(const std::vector<Video> &videos)
 
     const size_t column_spacing = 2;
 
-    const size_t status_column = 0;
-    const size_t status_width = 1;
-
-    const size_t date_column = status_column + status_width + column_spacing;
+    const size_t date_column = 0;
     const size_t date_width = std::string("xxxx-xx-xx xx:xx").size();
     const size_t first_name_column = date_column + date_width + column_spacing;
     const size_t last_name_column = cols;
@@ -98,14 +95,6 @@ void draw_channel_list(const std::vector<Video> &videos)
             termpaint_surface_write_with_attr_clipped(surface, first_name_column, row, video.title.c_str() + (name_quater * title_offset), attr, first_name_column, last_name_column);
         else
             termpaint_surface_write_with_attr(surface, first_name_column, row, "←", attr);
-        std::string status_symbol = "";
-        if(video.flags & kWatched) {
-            status_symbol = "*";
-        }
-        if(video.flags & kDownloaded) {
-            status_symbol = "↓";
-        }
-        termpaint_surface_write_with_attr(surface, status_column, row, status_symbol.c_str(), attr);
 
         if(++cur_entry > available_rows)
             break;
