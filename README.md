@@ -37,7 +37,7 @@ This tool is work in progress and some functions might not work (correctly).
 ### Configuration options
 |Option | Description | Default value | Required |
 |-------|-------------|---------------|--------- |
-| apiKey | YouTube API Key | | ✔ |
+| apiKey | YouTube API Key | | ✓ |
 | extraHeaders | Extra HTTP headers to send to YouTube. This is a JSON array of objects containing `"key"` and `"value"`. Will be sent with each API requres. | `[]`  | ✘  |
 | database | Path of channel/video database | $HOME/.local/share/yttui.db | ✘ |
-| watchCommand | Command executed to watch a video. `{{vid}}` will be replaced | `["xdg-open", "https://youtube.com/watch?v={{vid}}"]` | ✘ |
+| watchCommand | Command executed to watch a video. `{{vid}}` will be replaced by the Id of the video to watch. | `["xdg-open", "https://youtube.com/watch?v={{vid}}"]` | ✘ |
