@@ -39,7 +39,6 @@ public:
     void load_info(sqlite3 *db);
     bool is_valid() const;
 
-    unsigned int video_count;
     unsigned int unwatched;
 private:
     Channel(const std::string &id, const std::string &name);

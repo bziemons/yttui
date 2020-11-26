@@ -239,7 +239,6 @@ void Channel::fetch_new_videos(sqlite3 *db, progress_info *info, std::optional<s
 
 void Channel::load_info(sqlite3 *db)
 {
-    video_count = 0;
     unwatched = 0;
 
     if(is_virtual) {
@@ -253,7 +252,6 @@ void Channel::load_info(sqlite3 *db)
         const int flags = sqlite3_column_int(query, 0);
         const int count = sqlite3_column_int(query, 1);
 
-        video_count += count;
         if((flags & kWatched) == 0)
             unwatched += count;
     }

@@ -147,7 +147,6 @@ void fetch_videos_for_channel(Channel &channel, bool name_in_title=false)
     if(channel.is_virtual) {
         std::vector<Video> &channelVideos = videos[channel.id];
         channelVideos = Video::get_all_with_flag_value(channel.virtual_flag, channel.virtual_flag_value);
-        channel.video_count = channelVideos.size();
         for(Video &video: channelVideos) {
             video.tui_title_width = string_width(video.title);
         }
@@ -191,8 +190,8 @@ void select_channel_by_index(const int index) {
     selected_channel = index;
     const Channel &channel = channels.at(selected_channel);
     selected_video = 0;
-    current_video_count = channel.video_count;
     load_videos_for_channel(channel, clear_channels_on_change);
+    current_video_count = videos[channel.id].size();
     clear_channels_on_change = channel.is_virtual;
 }
 
