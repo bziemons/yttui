@@ -29,7 +29,7 @@ This tool is work in progress and some functions might not work (correctly).
 1. Get a YouTube API key.
 1. Create a configuration file.
     - You can either put it next to the application binary or in `$HOME/.config/yttui.conf`
-    - Have a look at `yttui.conf.sample`. It contains all possible configuration options and is a good place to start.
+    - Have a look at `yttui.conf.example`. It contains all possible configuration options and is a good place to start.
     - Configuration default values are described in "Configuration options".
 1. Start the application. You can press `F1` at any time to get help and `C-q` (holding down the control key and pressing q) to quit.
 
