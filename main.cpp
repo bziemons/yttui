@@ -3,6 +3,7 @@
 #include "tui.h"
 #include "yt.h"
 #include "db.h"
+#include "subprocess.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -169,6 +170,17 @@ bool startswith(const std::string &what, const std::string &with)
     return what.substr(0, len) == with;
 }
 
+std::string replace(const std::string &str, const std::string &what, const std::string &with)
+{
+    const size_t replace_length = what.size();
+    std::string out = str;
+    size_t pos = 0;
+    while((pos = out.find(what, pos)) != std::string::npos) {
+        out.replace(pos, replace_length, with);
+    }
+    return out;
+}
+
 void select_channel_by_index(const int index) {
     if(clear_channels_on_change) {
         for(auto &[k, v]: videos) {
@@ -303,18 +315,30 @@ void action_mark_video_watched() {
     ch.load_info(db);
 }
 
+std::vector<std::string> watch_command = {"xdg-open", "https://youtube.com/watch?v={{vid}}"};
+
 void action_watch_video() {
     Channel &ch = channels.at(selected_channel);
     Video &video = videos[ch.id][selected_video];
 
-    const std::string url = "https://youtube.com/watch?v=";
-    const std::string cmd = "xdg-open \"" + url + video.id + "\" > /dev/null";
-    int rc = system(cmd.c_str());
-    if(rc) {
-        message_box("Failed to open browser", ("xdg-open failed with error " + std::to_string(rc)).c_str());
+    const char *cmdline[watch_command.size() + 1];
+    for(size_t i=0; i<watch_command.size(); i++) {
+        const std::string arg = replace(watch_command[i], "{{vid}}", video.id);
+        cmdline[i] = strdup(arg.c_str());
+    }
+    cmdline[watch_command.size()] = nullptr;
+
+    subprocess_s proc;
+    if(int rc = subprocess_create(cmdline, subprocess_option_inherit_environment, &proc); rc != 0) {
+        const std::string message = watch_command.at(0) + " failed with error " + std::to_string(rc);
+        message_box("Failed to run watch command", message);
     } else {
         video.set_flag(db, kWatched);
         ch.load_info(db);
+        subprocess_join(&proc, nullptr);
+        for(size_t i=0; i<watch_command.size(); i++) {
+            free((void*)cmdline[i]);
+        }
     }
 }
 
@@ -450,6 +474,15 @@ int main()
     }
     if(config.count("database") && config["database"].is_string()) {
         database_filename = config["database"];
+    }
+    if(config.count("watchCommand") && config["watchCommand"].is_array()) {
+        watch_command.clear();
+        for(const json &elem: config["watchCommand"]) {
+            if(!elem.is_string()) {
+                tui_abort("Configuration error: watchCommand element " + elem.dump() + " is not a string but " + elem.type_name() + ".");
+            }
+            watch_command.push_back(elem);
+        }
     }
 
     db_init(database_filename);

@@ -2,5 +2,6 @@
     "apiKey": "YOUR_API_KEY",
     "extraHeaders": [
         {"key": "x-extra", "value": "heder"}
-    ]
+    ],
+    "watchCommand": ["xdg-open", "https://youtube.com/watch?v={{vid}}"]
 }
