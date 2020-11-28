@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "db.h"
 
 sqlite3 *db = nullptr;

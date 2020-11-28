@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #define _X_OPEN_SOURCE
 
 #include "tui.h"

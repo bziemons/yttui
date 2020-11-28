@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "yt.h"
 
 #include <sqlite3.h>

@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: MIT
 project('yttui', ['cpp'], default_options: ['buildtype=release', 'cpp_std=c++17'], version: '0.1.0')
 
 add_project_arguments('-Werror=return-type', language: 'cpp')

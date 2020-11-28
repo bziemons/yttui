@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include "tui.h"
 
 #include <algorithm>
