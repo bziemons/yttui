@@ -3,13 +3,6 @@ CONFIG += console c++17
 CONFIG -= app_bundle
 CONFIG -= qt
 
-unix:!macx: LIBS += -L$$PWD/termpaint/ -ltermpaint
-
-INCLUDEPATH += $$PWD/termpaint
-DEPENDPATH += $$PWD/termpaint
-
-unix:!macx: PRE_TARGETDEPS += $$PWD/termpaint/libtermpaint.a
-
 SOURCES += \
         db.cpp \
         main.cpp \
@@ -22,7 +15,7 @@ HEADERS += \
     yt.h
 
 unix: CONFIG += link_pkgconfig
-unix: PKGCONFIG += libcurl sqlite3 nlohmann_json
+unix: PKGCONFIG += libcurl sqlite3 nlohmann_json termpaint
 
 DISTFILES += \
     README.md \
