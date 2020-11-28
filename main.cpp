@@ -526,7 +526,7 @@ int main()
         {TERMPAINT_EV_CHAR, "W", 0, action_mark_all_videos_watched, "Mark channel as watched"},
         {TERMPAINT_EV_CHAR, "q", TERMPAINT_MOD_CTRL, [&](){ exit = true; }, "Quit"},
 
-        {TERMPAINT_EV_KEY, "Space", 0, action_show_video_detail, "Show video details"},
+        //{TERMPAINT_EV_KEY, "Enter", 0, action_show_video_detail, "Show video details"},
         {TERMPAINT_EV_KEY, "ArrowUp", 0, action_select_prev_video, "Previous video"},
         {TERMPAINT_EV_KEY, "ArrowDown", 0, action_select_next_video, "Next video"},
         {TERMPAINT_EV_KEY, "PageUp", 0, action_select_prev_video_page, "Previous video page"},
