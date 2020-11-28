@@ -6,26 +6,27 @@ This tool is work in progress and some functions might not work (correctly).
 
 ### Building
 #### Requirements:
-* Linux (other platforms are untested)
+* Linux (other platforms are untested and likely require additional work)
 * A modern, C++17 capable compiler
-* qmake
-* make
+* meson
+* ninja
 * pkg-config
 * Installed (it may also be required to install separate development packages) and accesible via pkg-config:
     * [libcurl](https://curl.se)
-    * [nlohman-json](https://github.com/nlohmann/json/) (at least version 3.5.0)
+    * [nlohmann-json](https://github.com/nlohmann/json) (at least version 3.5.0)
     * [sqlite3](https://sqlite.org)
-    * [termpaint](https://termpaint.namepad.de/)
+    * [termpaint](https://github.com/termpaint/termpaint)
 
 #### How to build
-1. Create a build folder and open a terminal there.
-1. Run qmake. E.g. `qmake ..`.
-1. Run `make`.
-1. You can now start the application by running `./yttui` (but have a look at the configuration options first).
+1. Create a build folder.
+1. Configure the project by running e.g. `meson setup /path/to/build/dir` in the source directory. See `meson setup --help` for available configuration options.
+1. Build the application with `meson compile -C /path/to/build/dir`.
+1. You can now start the application by running `/path/to/build/dir/yttui` (but have a look at the configuration options first).
+1. Optionally you can install the application by running `meson install -C /path/to/build/dir`.
 
 
 ### Getting started
-1. Build the application
+1. Build (and optionally install) the application
 1. Get a YouTube API key.
 1. Create a configuration file.
     - You can either put it next to the application binary or in `$HOME/.config/yttui.conf`
