@@ -3,10 +3,10 @@ project('yttui', ['cpp'], default_options: ['buildtype=release', 'cpp_std=c++17'
 
 add_project_arguments('-Werror=return-type', language: 'cpp')
 
-termpaint_dep = dependency('termpaint', static: true)
+termpaint_dep = dependency('termpaint', static: true, version: '>=0.3.0')
 sqlite3_dep = dependency('sqlite3')
 curl_dep = dependency('libcurl')
-json_dep = dependency('nlohmann_json')
+json_dep = dependency('nlohmann_json', version: '>=3.5.0')
 
 #ide:editable-filelist
 src_files = [
