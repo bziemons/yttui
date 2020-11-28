@@ -1,4 +1,4 @@
 *.conf
-*.sqlite
-*.pro.user
+*.db
+*.user
 build-*/
