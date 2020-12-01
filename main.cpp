@@ -143,7 +143,7 @@ void load_videos_for_channel(const Channel &channel, bool force=false)
         selected_video = 0;
 }
 
-void fetch_videos_for_channel(Channel &channel, bool name_in_title=false)
+int fetch_videos_for_channel(Channel &channel, bool name_in_title=false)
 {
     if(channel.is_virtual) {
         std::vector<Video> &channelVideos = videos[channel.id];
@@ -151,7 +151,7 @@ void fetch_videos_for_channel(Channel &channel, bool name_in_title=false)
         for(Video &video: channelVideos) {
             video.tui_title_width = string_width(video.title);
         }
-        return;
+        return channelVideos.size();
     }
 
     std::string title("Refreshing");
@@ -159,10 +159,12 @@ void fetch_videos_for_channel(Channel &channel, bool name_in_title=false)
         title.append(" ").append(channel.name);
     title.append("…");
     progress_info *info = begin_progress(title, 30);
-    channel.fetch_new_videos(db, info);
+    const int new_video_count = channel.fetch_new_videos(db, info);
     end_progress(info);
     load_videos_for_channel(channels[selected_channel], true);
     channel.load_info(db);
+
+    return new_video_count;
 }
 
 bool startswith(const std::string &str, const std::string &with)

@@ -36,7 +36,7 @@ public:
     static std::vector<Channel> get_all(sqlite3 *db);
 
     std::string upload_playlist() const;
-    void fetch_new_videos(sqlite3 *db, progress_info *info=nullptr, std::optional<std::string> after={}, std::optional<int> max_count={});
+    int fetch_new_videos(sqlite3 *db, progress_info *info=nullptr, std::optional<std::string> after={}, std::optional<int> max_count={});
     void load_info(sqlite3 *db);
     bool is_valid() const;
 

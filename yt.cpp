@@ -174,7 +174,7 @@ void add_video(sqlite3 *db, const json &snippet, const std::string &channel_id) 
 }
 
 
-void Channel::fetch_new_videos(sqlite3 *db, progress_info *info, std::optional<std::string> after, std::optional<int> max_count)
+int Channel::fetch_new_videos(sqlite3 *db, progress_info *info, std::optional<std::string> after, std::optional<int> max_count)
 {
     const std::string playlist_id = upload_playlist();
     std::map<std::string, std::string> params = {
@@ -217,7 +217,7 @@ void Channel::fetch_new_videos(sqlite3 *db, progress_info *info, std::optional<s
 
             add_video(db, snippet, channel_id);
             //fprintf(stderr, "New video: '%s': %s.\r\n", title.c_str(), video_id.c_str());
-            processed += 1;
+            processed++;
             if(max_count && processed >= *max_count) {
                 abort = true;
                 break;
@@ -236,6 +236,8 @@ void Channel::fetch_new_videos(sqlite3 *db, progress_info *info, std::optional<s
             break;
         }
     }
+
+    return processed;
 }
 
 void Channel::load_info(sqlite3 *db)
