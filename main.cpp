@@ -472,7 +472,7 @@ std::optional<json> load_json(const std::string &filename) {
         ifs >> data;
         return data;
     } catch (json::parse_error &err) {
-        fprintf(stderr, "Failed to parse JSON file %s: %s\n", filename.c_str(), err.what());
+        tui_abort("Failed to parse JSON file %s: %s", filename.c_str(), err.what());
         return {};
     }
 }
