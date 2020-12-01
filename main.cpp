@@ -297,6 +297,36 @@ void action_select_channel() {
     }
 }
 
+bool run_command(const std::vector<std::string> &cmd, const std::vector<std::pair<std::string, std::string>> &placeholders={}) {
+    const size_t cmd_size = cmd.size();
+
+    if(!cmd_size)
+        return true;
+
+    const char *cmdline[cmd_size + 1];
+    for(size_t c=0; c<cmd_size; c++) {
+        std::string arg = cmd[c];
+        for(size_t p=0; p<placeholders.size(); p++) {
+            const auto &[what, with] = placeholders.at(p);
+            arg = replace(arg, what, with);
+        }
+        cmdline[c] = strdup(arg.c_str());
+    }
+    cmdline[cmd_size] = nullptr;
+
+    subprocess_s proc;
+    const int rc = subprocess_create(cmdline, subprocess_option_inherit_environment, &proc);
+    if(rc != 0) {
+        const std::string message = cmd.at(0) + " failed with error " + std::to_string(rc);
+        message_box("Failed to run command", message);
+    }
+    subprocess_join(&proc, nullptr);
+    for(size_t i=0; i<cmd_size; i++) {
+        free((void*)cmdline[i]);
+    }
+    return rc == 0;
+}
+
 void action_refresh_channel() {
     fetch_videos_for_channel(channels.at(selected_channel));
 }
@@ -322,24 +352,9 @@ void action_watch_video() {
     Channel &ch = channels.at(selected_channel);
     Video &video = videos[ch.id][selected_video];
 
-    const char *cmdline[watch_command.size() + 1];
-    for(size_t i=0; i<watch_command.size(); i++) {
-        const std::string arg = replace(watch_command[i], "{{vid}}", video.id);
-        cmdline[i] = strdup(arg.c_str());
-    }
-    cmdline[watch_command.size()] = nullptr;
-
-    subprocess_s proc;
-    if(int rc = subprocess_create(cmdline, subprocess_option_inherit_environment, &proc); rc != 0) {
-        const std::string message = watch_command.at(0) + " failed with error " + std::to_string(rc);
-        message_box("Failed to run watch command", message);
-    } else {
+    if(run_command(watch_command, {{"{{vid}}", video.id}})) {
         video.set_flag(db, kWatched);
         ch.load_info(db);
-        subprocess_join(&proc, nullptr);
-        for(size_t i=0; i<watch_command.size(); i++) {
-            free((void*)cmdline[i]);
-        }
     }
 }
 
