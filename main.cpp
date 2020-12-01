@@ -329,15 +329,45 @@ bool run_command(const std::vector<std::string> &cmd, const std::vector<std::pai
     return rc == 0;
 }
 
+std::vector<std::string> notify_channel_new_video_command;
+std::vector<std::string> notify_channel_new_videos_command;
+std::vector<std::string> notify_channels_new_videos_command;
+
 void action_refresh_channel() {
-    fetch_videos_for_channel(channels.at(selected_channel));
+    Channel &ch = channels.at(selected_channel);
+    const int new_videos = fetch_videos_for_channel(channels.at(selected_channel));
+    if(new_videos == 0)
+        return;
+    if(new_videos == 1 && !notify_channel_new_video_command.empty()) {
+        run_command(notify_channel_new_video_command, {
+                        {"{{channelName}}", ch.name},
+                        {"{{videoTitle}}", videos[ch.id].front().title},
+                    });
+    } else if(notify_channel_new_videos_command.size()) {
+        run_command(notify_channel_new_videos_command, {
+                        {"{{channelName}}", ch.name},
+                        {"{{newVideos}}", std::to_string(new_videos)}
+                    });
+    }
+
 }
 
 void action_refresh_all_channels() {
     if(message_box("Refresh all channels?", ("Do you want to refresh all " + std::to_string(channels.size()) + " channels?").c_str(), Button::Yes | Button::No, Button::No) != Button::Yes)
         return;
+    int updated_channels = 0;
+    int new_videos = 0;
     for(Channel &channel: channels) {
-        fetch_videos_for_channel(channel, true);
+        const int count = fetch_videos_for_channel(channel, true);
+        new_videos += count;
+        if(count)
+            updated_channels++;
+    }
+    if(updated_channels && new_videos && !notify_channels_new_videos_command.empty()) {
+        run_command(notify_channels_new_videos_command, {
+                        {"{{updatedChannels}}", std::to_string(updated_channels)},
+                        {"{{newVideos}}", std::to_string(new_videos)}
+                    });
     }
 }
 
@@ -523,6 +553,12 @@ int main()
         database_filename = replace(config["database"], "$HOME", user_home);
     }
     config_get_string_list(watch_command, config, "watchCommand");
+    if(config.contains("notifications") && config["notifications"].is_object()) {
+        const json &notifications = config["notifications"];
+        config_get_string_list(notify_channel_new_video_command, notifications, "channelNewVideoCommand");
+        config_get_string_list(notify_channel_new_videos_command, notifications, "channelNewVideosCommand");
+        config_get_string_list(notify_channels_new_videos_command, notifications, "channelsNewVideosCommand");
+    }
 
     db_init(database_filename);
     make_virtual_unwatched_channel();

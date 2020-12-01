@@ -42,3 +42,13 @@ This tool is work in progress and some functions might not work (correctly).
 | extraHeaders | Extra HTTP headers to send to YouTube. This is a JSON array of objects containing `"key"` and `"value"`. Will be sent with each API requres. | `[]`  | ✘  |
 | database | Path of channel/video database | $HOME/.local/share/yttui.db | ✘ |
 | watchCommand | Command executed to watch a video. `{{vid}}` will be replaced by the Id of the video to watch. | `["xdg-open", "https://youtube.com/watch?v={{vid}}"]` | ✘ |
+| notifications | Object describing notification settings | `{}` | ✘ |
+
+#### Notifcation options
+The `notifications` entry can have the following sub-options:
+
+|Option | Description | Default value | Required |
+|-------|-------------|---------------|--------- |
+| channelNewVideoCommand | Gets executed when refreshing a single channel and there is one new videos. `{{channelName}}` will be replaced with the name of updated channel, `{{title}}` with the title of the new video. | `[]` | ✘ |
+| channelNewVideosCommand | Gets executed when refreshing a single channel and there are multiple new videos. `{{channelName}}` will be replaced with the name of updated channel, `{{newVideos}}` with the number of new videos. | `[]` | ✘ |
+| channelsNewVideosCommand | Gets executed when refreshing multiple channels and there are new videos. `{{updatedChannels}}` will be replaced with the number of updated channels, `{{newVideos}}` with the number of new videos across all refreshed channels. | `[]` | ✘ |
