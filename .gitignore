@@ -2,3 +2,5 @@
 *.db
 *.user
 build-*/
+subprojects/packagecache/
+subprojects/nlohmann_json*/
