@@ -474,6 +474,19 @@ static std::string get_module_path() {
     return std::string(exe);
 }
 
+void config_get_string_list(std::vector<std::string> &buffer, const json &obj, const std::string &key) {
+    if(!obj.contains(key) || !obj[key].is_array())
+        return;
+    buffer.clear();
+
+    for(const json &elem: obj[key]) {
+        if(!elem.is_string()) {
+            tui_abort("Configuration error: " + key + " element " + elem.dump() + " is not a string but " + elem.type_name() + ".");
+        }
+        buffer.push_back(elem);
+    }
+}
+
 int main()
 {
     const std::string module_path = get_module_path();
@@ -509,15 +522,7 @@ int main()
     if(config.count("database") && config["database"].is_string()) {
         database_filename = replace(config["database"], "$HOME", user_home);
     }
-    if(config.count("watchCommand") && config["watchCommand"].is_array()) {
-        watch_command.clear();
-        for(const json &elem: config["watchCommand"]) {
-            if(!elem.is_string()) {
-                tui_abort("Configuration error: watchCommand element " + elem.dump() + " is not a string but " + elem.type_name() + ".");
-            }
-            watch_command.push_back(elem);
-        }
-    }
+    config_get_string_list(watch_command, config, "watchCommand");
 
     db_init(database_filename);
     make_virtual_unwatched_channel();
