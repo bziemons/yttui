@@ -63,6 +63,7 @@ static json api_request(const std::string &url, std::map<std::string, std::strin
     try {
         return json::parse(data);
     } catch (json::exception &err) {
+        tui_abort("Failed to parse YouTube API response:\n%s", err.what());
     }
     return {};
 }
