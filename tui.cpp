@@ -41,6 +41,8 @@ static void convert_tp_event(void *, termpaint_event *tp_event) {
 }
 
 std::optional<Event> wait_for_event(termpaint_integration *integration, int timeout) {
+    const int cols = termpaint_surface_width(surface);
+    const int rows = termpaint_surface_height(surface);
     while (eventqueue.empty()) {
         bool ok = false;
         if(timeout > 0)
@@ -49,8 +51,14 @@ std::optional<Event> wait_for_event(termpaint_integration *integration, int time
             ok = termpaintx_full_integration_do_iteration(integration);
         if (!ok) {
             return {}; // or some other error handling
+        } else if(cols != termpaint_surface_width(surface) || rows != termpaint_surface_height(surface)) {
+            Event e;
+            e.modifier = 0;
+            e.type = EV_RESIZE;
+            eventqueue.push_back(e);
         } else if(timeout == 0) {
             Event e;
+            e.modifier = 0;
             e.type = EV_TIMEOUT;
             eventqueue.push_back(e);
         }
@@ -111,9 +119,9 @@ void tp_flush(const bool force)
     termpaint_terminal_flush(terminal, force);
 }
 
-std::optional<Event> tp_wait_for_event()
+std::optional<Event> tp_wait_for_event(int timeout)
 {
-    return wait_for_event(integration, 0);
+    return wait_for_event(integration, timeout);
 }
 
 static std::string repeated(const int n, const std::string &what)

@@ -4,6 +4,7 @@
 #include <termpaintx.h>
 #define EV_TIMEOUT 0xffff
 #define EV_IGNORE 0xfffe
+#define EV_RESIZE 0xfffd
 
 #include <functional>
 #include <optional>
@@ -58,7 +59,7 @@ void tp_shutdown();
 void tp_flush(const bool force=false);
 void tp_pause();
 void tp_unpause();
-std::optional<Event> tp_wait_for_event();
+std::optional<Event> tp_wait_for_event(int timeout=0);
 
 struct action
 {
