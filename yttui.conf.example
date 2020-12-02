@@ -9,5 +9,6 @@
         "channelNewVideoCommand": ["notify-send", "--app-name", "yttui", "New video from {{channelName}}", "{{videoTitle}}"],
         "channelNewVideosCommand": ["notify-send", "--app-name", "yttui", "New videos from {{channelName}}", "There are {{newVideos}} new videos."],
         "channelsNewVideosCommand": ["notify-send", "--app-name", "yttui", "New videos from multiple channels", "There are {{newVideos}} new videos from {{updatedChannels}} channels."]
-    }
+    },
+    "autoRefreshInterval": 3600
 }

@@ -43,6 +43,7 @@ This tool is work in progress and some functions might not work (correctly).
 | database | Path of channel/video database | $HOME/.local/share/yttui.db | ✘ |
 | watchCommand | Command executed to watch a video. `{{vid}}` will be replaced by the Id of the video to watch. | `["xdg-open", "https://youtube.com/watch?v={{vid}}"]` | ✘ |
 | notifications | Object describing notification settings | `{}` | ✘ |
+| autoRefreshInterval | Automatically refresh all channels every X seconds (and after 30 seconds of inactivity). -1 to disable. | -1 | ✘ |
 
 #### Notifcation options
 The `notifications` entry can have the following sub-options:

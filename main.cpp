@@ -7,6 +7,7 @@
 #include "subprocess.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
@@ -352,8 +353,8 @@ void action_refresh_channel() {
 
 }
 
-void action_refresh_all_channels() {
-    if(message_box("Refresh all channels?", ("Do you want to refresh all " + std::to_string(channels.size()) + " channels?").c_str(), Button::Yes | Button::No, Button::No) != Button::Yes)
+void action_refresh_all_channels(bool ask=true) {
+    if(ask && message_box("Refresh all channels?", ("Do you want to refresh all " + std::to_string(channels.size()) + " channels?").c_str(), Button::Yes | Button::No, Button::No) != Button::Yes)
         return;
     int updated_channels = 0;
     int new_videos = 0;
@@ -560,6 +561,14 @@ int main()
         config_get_string_list(notify_channels_new_videos_command, notifications, "channelsNewVideosCommand");
     }
 
+    int auto_refresh_interval = -1; // In seconds
+    if(config.count("autoRefreshInterval") && config["autoRefreshInterval"].is_number_integer()) {
+        auto_refresh_interval = config["autoRefreshInterval"];
+        auto_refresh_interval = std::max(-1, auto_refresh_interval);
+    }
+    std::chrono::system_clock::time_point next_update = std::chrono::system_clock::now() + std::chrono::seconds(auto_refresh_interval);
+    std::chrono::system_clock::time_point last_user_action;
+
     db_init(database_filename);
     make_virtual_unwatched_channel();
     for(Channel &channel: Channel::get_all(db)) {
@@ -578,7 +587,7 @@ int main()
         {TERMPAINT_EV_CHAR, "j", 0, action_select_prev_channel, "Select previous channel"},
         {TERMPAINT_EV_CHAR, "k", 0, action_select_next_channel, "Select next channel"},
         {TERMPAINT_EV_CHAR, "r", 0, action_refresh_channel, "Refresh selected channel"},
-        {TERMPAINT_EV_CHAR, "R", 0, action_refresh_all_channels, "Refresh all channels"},
+        {TERMPAINT_EV_CHAR, "R", 0, [&](){ action_refresh_all_channels(); }, "Refresh all channels"},
         {TERMPAINT_EV_CHAR, "w", 0, action_watch_video, "Watch video"},
         {TERMPAINT_EV_CHAR, "w", TERMPAINT_MOD_ALT, action_mark_video_watched, "Mark video as watched"},
         {TERMPAINT_EV_CHAR, "u", 0, action_mark_video_unwatched, "Mark video as unwatched"},
@@ -597,17 +606,31 @@ int main()
         {TERMPAINT_EV_CHAR, "l", TERMPAINT_MOD_CTRL, [&](){ force_repaint = true; }, "Force redraw"},
     };
 
+    bool draw = true;
     do {
-        termpaint_surface_clear(surface, TERMPAINT_DEFAULT_COLOR, TERMPAINT_DEFAULT_COLOR);
-        draw_channel_list(videos[channels.at(selected_channel).id]);
-        tp_flush(force_repaint);
-        force_repaint = false;
+        if(draw) {
+            termpaint_surface_clear(surface, TERMPAINT_DEFAULT_COLOR, TERMPAINT_DEFAULT_COLOR);
+            draw_channel_list(videos[channels.at(selected_channel).id]);
+            tp_flush(force_repaint);
+            force_repaint = false;
+        }
+        draw = true;
 
-        auto event = tp_wait_for_event();
+        auto event = tp_wait_for_event(1000);
         if(!event)
             abort();
 
-        tui_handle_action(*event, actions);
+        if(event->type == EV_TIMEOUT) {
+            draw = false;
+            const bool update_pending = next_update < std::chrono::system_clock::now();
+            const bool inactivity_threshold = (std::chrono::system_clock::now() - last_user_action) > std::chrono::seconds(30);
+            if(auto_refresh_interval != -1 && update_pending && inactivity_threshold) {
+                action_refresh_all_channels(false);
+                std::chrono::system_clock::now() + std::chrono::seconds(auto_refresh_interval);
+            }
+        } else if(tui_handle_action(*event, actions)) {
+                last_user_action = std::chrono::system_clock::now();
+        }
     } while (!exit);
 
     tp_shutdown();
