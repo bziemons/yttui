@@ -28,7 +28,7 @@ This tool is work in progress and some functions might not work (correctly).
 ### Getting started
 1. Build (and optionally install) the application
 1. Get a YouTube API key.
-1. Create a configuration file.
+1. Create a configuration file in JSON format.
     - You can either put it next to the application binary or in `$HOME/.config/yttui.conf`
     - Have a look at `yttui.conf.example`. It contains all possible configuration options and is a good place to start.
     - Configuration default values are described in "Configuration options".
