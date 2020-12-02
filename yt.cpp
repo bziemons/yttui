@@ -86,6 +86,11 @@ Channel Channel::add(sqlite3 *db, const std::string &selector, const std::string
 
     const json response = api_request("https://content.googleapis.com/youtube/v3/channels", params);
 
+    // Error responses dont have pageInfo items
+    if(!response.count("pageInfo")) {
+        return Channel("", "");
+    }
+
     const json page_info = response["pageInfo"];
     const bool any_results = page_info["totalResults"] > 0;
 
