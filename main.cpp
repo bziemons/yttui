@@ -626,7 +626,7 @@ int main()
             const bool inactivity_threshold = (std::chrono::system_clock::now() - last_user_action) > std::chrono::seconds(30);
             if(auto_refresh_interval != -1 && update_pending && inactivity_threshold) {
                 action_refresh_all_channels(false);
-                std::chrono::system_clock::now() + std::chrono::seconds(auto_refresh_interval);
+                next_update = std::chrono::system_clock::now() + std::chrono::seconds(auto_refresh_interval);
             }
         } else if(tui_handle_action(*event, actions)) {
                 last_user_action = std::chrono::system_clock::now();
