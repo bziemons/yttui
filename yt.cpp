@@ -197,7 +197,7 @@ int Channel::fetch_new_videos(sqlite3 *db, progress_info *info, std::optional<st
     while(true) {
         const json response = api_request("https://content.googleapis.com/youtube/v3/playlistItems", params);
 
-        if(response.empty())
+        if(response.empty() || !response.count("pageInfo")) // TODO: Better API error detection/handling. For now just break if there is no pageInfo field.
             break;
 
         for(auto &item: response["items"]) {
