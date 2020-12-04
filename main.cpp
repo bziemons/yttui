@@ -152,7 +152,7 @@ int fetch_videos_for_channel(Channel &channel, bool name_in_title=false)
         for(Video &video: channelVideos) {
             video.tui_title_width = string_width(video.title);
         }
-        return channelVideos.size();
+        return 0;
     }
 
     std::string title("Refreshing");
@@ -337,7 +337,7 @@ std::vector<std::string> notify_channels_new_videos_command;
 void action_refresh_channel() {
     Channel &ch = channels.at(selected_channel);
     const int new_videos = fetch_videos_for_channel(channels.at(selected_channel));
-    if(new_videos == 0)
+    if(new_videos == 0 || ch.is_virtual)
         return;
     if(new_videos == 1 && !notify_channel_new_video_command.empty()) {
         run_command(notify_channel_new_video_command, {
@@ -360,6 +360,8 @@ void action_refresh_all_channels(bool ask=true) {
     int new_videos = 0;
     for(Channel &channel: channels) {
         const int count = fetch_videos_for_channel(channel, true);
+        if(channel.is_virtual)
+            continue;
         new_videos += count;
         if(count)
             updated_channels++;
