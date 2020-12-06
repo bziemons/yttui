@@ -41,6 +41,7 @@ public:
     bool is_valid() const;
 
     unsigned int unwatched;
+    size_t tui_name_width;
 private:
     Channel(const std::string &id, const std::string &name);
 };
@@ -48,6 +49,7 @@ private:
 struct Video
 {
     std::string id;
+    std::string channel_id;
     std::string title;
     std::string description;
     int flags;

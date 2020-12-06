@@ -40,7 +40,7 @@ static termpaint_attr* get_attr(const AttributeSetType type, const bool highligh
     return highlight ? attributes[type].highlight : attributes[type].normal;
 }
 
-void draw_channel_list(const std::vector<Video> &videos)
+void draw_channel_list(const std::vector<Video> &videos, bool show_channel_name=false)
 {
     const size_t cols = termpaint_surface_width(surface);
     const size_t rows = termpaint_surface_height(surface);
@@ -49,16 +49,39 @@ void draw_channel_list(const std::vector<Video> &videos)
 
     const size_t date_column = 0;
     const size_t date_width = std::string("xxxx-xx-xx xx:xx").size();
-    const size_t first_name_column = date_column + date_width + column_spacing;
-    const size_t last_name_column = cols;
-    const size_t name_quater = (last_name_column - first_name_column) / 4;
 
     const size_t start_row = 2;
     const size_t available_rows = rows - 2;
     videos_per_page = available_rows;
+    const int cur_page = selected_video / available_rows;
+
+    size_t cur_entry = 0;
+
+    std::map<std::string, std::string> channel_name_lookup;
+
+    const size_t channel_name_column = date_column + date_width + column_spacing;
+    size_t channel_name_width = show_channel_name * std::string("Channel").size();
+    if(show_channel_name) {
+        for(size_t i = cur_page*available_rows; i < videos.size(); i++) {
+            const Video &video = videos.at(i);
+            for(size_t c = 0; c<channels.size(); c++) {
+                const Channel &channel = channels.at(c);
+                if(video.channel_id == channel.id) {
+                    channel_name_lookup[channel.id] = channel.name;
+                    channel_name_width = std::max(channel_name_width, channel.tui_name_width);
+                    break;
+                }
+            }
+            if(++cur_entry > available_rows)
+                break;
+        }
+    }
+
+    const size_t first_name_column = date_column + date_width + column_spacing + channel_name_width + (channel_name_width > 0) * column_spacing;
+    const size_t last_name_column = cols;
+    const size_t name_quater = (last_name_column - first_name_column) / 4;
 
     const int pages = videos.size() / available_rows;
-    const int cur_page = selected_video / available_rows;
 
     const std::string channel_name = std::string("Channel: ") + channels[selected_channel].name.c_str();
     termpaint_surface_write_with_attr(surface, 0, 0, channel_name.c_str(), get_attr(ASNormal));
@@ -70,11 +93,13 @@ void draw_channel_list(const std::vector<Video> &videos)
     }
 
     termpaint_surface_write_with_attr(surface, date_column, 1, "Date", get_attr(ASNormal));
+    if(show_channel_name)
+        termpaint_surface_write_with_attr(surface, channel_name_column, 1, "Channel", get_attr(ASNormal));
     termpaint_surface_write_with_attr(surface, first_name_column, 1, "Title", get_attr(ASNormal));
 
     any_title_in_next_half = false;
 
-    size_t cur_entry = 0;
+    cur_entry = 0;
     for(size_t i = cur_page*available_rows; i < videos.size(); i++) {
         const size_t row = start_row + cur_entry;
         const bool selected = i == selected_video;
@@ -92,6 +117,9 @@ void draw_channel_list(const std::vector<Video> &videos)
         }
 
         termpaint_surface_write_with_attr(surface, date_column, row, dt.data(), attr);
+        if(show_channel_name) {
+            termpaint_surface_write_with_attr(surface, channel_name_column, row, channel_name_lookup[video.channel_id].c_str(), attr);
+        }
 
         bool in_this_quater = title_offset * name_quater < video.tui_title_width;
         any_title_in_next_half = any_title_in_next_half || ((title_offset + 2) * name_quater) < video.tui_title_width;
@@ -216,6 +244,7 @@ void select_channel_by_id(const std::string &channel_id) {
 void add_channel_to_list(Channel &channel)
 {
     channel.load_info(db);
+    channel.tui_name_width = string_width(channel.name);
 
     std::string selected_channel_id;
     if(selected_channel < channels.size())
@@ -611,8 +640,9 @@ int main()
     bool draw = true;
     do {
         if(draw) {
+            Channel &channel = channels.at(selected_channel);
             termpaint_surface_clear(surface, TERMPAINT_DEFAULT_COLOR, TERMPAINT_DEFAULT_COLOR);
-            draw_channel_list(videos[channels.at(selected_channel).id]);
+            draw_channel_list(videos[channel.id], channel.is_virtual);
             tp_flush(force_repaint);
             force_repaint = false;
         }

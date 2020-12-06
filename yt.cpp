@@ -68,11 +68,11 @@ static json api_request(const std::string &url, std::map<std::string, std::strin
     return {};
 }
 
-Channel::Channel(sqlite3_stmt *row): id(get_string(row, 0)), name(get_string(row, 1)), is_virtual(false), virtual_flag(kNone), virtual_flag_value(false)
+Channel::Channel(sqlite3_stmt *row): id(get_string(row, 0)), name(get_string(row, 1)), is_virtual(false), virtual_flag(kNone), virtual_flag_value(false), unwatched(0), tui_name_width(0)
 {
 }
 
-Channel::Channel(const std::string &id, const std::string &name): id(id), name(name), is_virtual(false), virtual_flag(kNone), virtual_flag_value(false)
+Channel::Channel(const std::string &id, const std::string &name): id(id), name(name), is_virtual(false), virtual_flag(kNone), virtual_flag_value(false), unwatched(0), tui_name_width(0)
 {
 }
 
@@ -272,8 +272,9 @@ bool Channel::is_valid() const
     return !id.empty() && !name.empty();
 }
 
-Video::Video(sqlite3_stmt *row): id(get_string(row, 0)), title(get_string(row, 2)), description(get_string(row, 3)),
-    flags(sqlite3_column_int(row, 4)), published(get_string(row, 5)), tui_title_width(0)
+Video::Video(sqlite3_stmt *row): id(get_string(row, 0)), channel_id(get_string(row, 1)), title(get_string(row, 2)),
+    description(get_string(row, 3)), flags(sqlite3_column_int(row, 4)), published(get_string(row, 5)),
+    tui_title_width(0)
 {
 }
 
