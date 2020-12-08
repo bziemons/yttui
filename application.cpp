@@ -264,15 +264,23 @@ void add_channel_to_list(Channel &channel)
     }
 }
 
-void make_virtual_unwatched_channel()
-{
-    Channel channel = Channel::add_virtual("All Unwatched", kWatched, false);
-    std::vector<Video> &channelVideos = videos[channel.id];
+void prepare_virtual_channel(Channel &channel) {
+    std::vector <Video> &channelVideos = videos[channel.id];
     channelVideos = Video::get_all_with_flag_value(channel.virtual_flag, channel.virtual_flag_value);
-    for(Video &video: channelVideos) {
+    for (Video &video: channelVideos) {
         video.tui_title_width = string_width(video.title);
     }
     add_channel_to_list(channel);
+}
+
+void add_virtual_channels()
+{
+    Channel unwatched_virt_channel = Channel::add_virtual("All Unwatched", kWatched, false);
+    prepare_virtual_channel(unwatched_virt_channel);
+    Channel all_virt_channel = Channel::add_virtual("All", kNone, false);
+    prepare_virtual_channel(all_virt_channel);
+    Channel watched_virt_channel = Channel::add_virtual("All Watched", kWatched, true);
+    prepare_virtual_channel(watched_virt_channel);
 }
 
 void action_add_channel_by_name()
@@ -622,7 +630,7 @@ static void run()
     std::chrono::system_clock::time_point last_user_action;
 
     db_init(database_filename);
-    make_virtual_unwatched_channel();
+    add_virtual_channels();
     for(Channel &channel: Channel::get_all(db)) {
         add_channel_to_list(channel);
     }
