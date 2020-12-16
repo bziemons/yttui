@@ -663,6 +663,7 @@ static void run()
             if(auto_refresh_interval != -1 && update_pending && inactivity_threshold) {
                 action_refresh_all_channels(false);
                 next_update = std::chrono::system_clock::now() + std::chrono::seconds(auto_refresh_interval);
+                draw = true;
             }
         } else if(tui_handle_action(*event, actions)) {
                 last_user_action = std::chrono::system_clock::now();
