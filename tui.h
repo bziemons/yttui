@@ -55,6 +55,7 @@ Button operator|(const Button &a, const Button &b);
 Button operator&(const Button &a, const Button &b);
 
 void tp_init();
+void tp_init_from_fd(int fd);
 void tp_shutdown();
 void tp_flush(const bool force=false);
 void tp_pause();

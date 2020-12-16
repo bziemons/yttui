@@ -68,7 +68,7 @@ std::optional<Event> wait_for_event(termpaint_integration *integration, int time
     return e;
 }
 
-void tp_init()
+static void tp_init_internal()
 {
     all_buttons = {
         {Button::Ok, "Ok", 2},
@@ -95,9 +95,40 @@ void tp_init()
     new_attr_set(attributes[ASWatched], TERMPAINT_DEFAULT_COLOR);
     new_attr_set(attributes[ASUnwatched], TERMPAINT_DEFAULT_COLOR, TERMPAINT_STYLE_BOLD);
 
-    integration = termpaintx_full_integration_setup_terminal_fullscreen( "+kbdsig +kbdsigint +kbdsigtstp", convert_tp_event, nullptr, &terminal);
     surface = termpaint_terminal_get_surface(terminal);
     termpaint_terminal_set_cursor_visible(terminal, false);
+}
+
+static const char* terminal_options = "+kbdsig +kbdsigint +kbdsigtstp";
+
+void tp_init()
+{
+    integration = termpaintx_full_integration_setup_terminal_fullscreen( "+kbdsig +kbdsigint +kbdsigtstp", convert_tp_event, nullptr, &terminal);
+    tp_init_internal();
+}
+
+void tp_init_from_fd(int fd)
+{
+    integration = termpaintx_full_integration_from_fd(fd, false, terminal_options);
+    if (!integration) {
+        //std::string error = "Error: Terminal not available!";
+        //(void)!write(fd, error.c_str(), error.size()); // already printing an error message
+        return;
+    }
+
+    terminal = termpaint_terminal_new(integration);
+    termpaintx_full_integration_set_terminal(integration, terminal);
+    termpaint_terminal_set_event_cb(terminal, convert_tp_event, nullptr);
+    termpaint_terminal_auto_detect(terminal);
+    termpaintx_full_integration_wait_for_ready_with_message(integration, 10000,
+                                           "Terminal auto detection is taking unusually long, press space to abort.");
+    termpaintx_full_integration_apply_input_quirks(integration);
+    int width, height;
+    termpaintx_full_integration_terminal_size(integration, &width, &height);
+    termpaint_terminal_setup_fullscreen(terminal, width, height, terminal_options);
+    termpaintx_full_integration_ttyrescue_start(integration);
+
+    tp_init_internal();
 }
 
 void tp_shutdown()
