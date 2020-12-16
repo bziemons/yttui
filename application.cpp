@@ -573,6 +573,7 @@ static void run()
             break;
         }
     }
+
     if(config.count("apiKey") && config["apiKey"].is_string()) {
         yt_config.api_key = config["apiKey"];
     } else {
@@ -610,8 +611,9 @@ static void run()
         add_channel_to_list(channel);
     }
 
-    if(channels.size())
+    if(channels.size()) {
         select_channel_by_index(0);
+    }
 
     bool exit = false;
     bool force_repaint = false;
@@ -666,7 +668,7 @@ static void run()
                 draw = true;
             }
         } else if(tui_handle_action(*event, actions)) {
-                last_user_action = std::chrono::system_clock::now();
+            last_user_action = std::chrono::system_clock::now();
         }
     } while (!exit);
 
