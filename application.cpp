@@ -491,7 +491,12 @@ void action_scroll_title_right() {
 }
 
 void action_show_video_detail() {
-    message_box("Details", "Video details go here...");
+    const size_t cols = termpaint_surface_width(surface);
+
+    const Channel &ch = channels.at(selected_channel);
+    const Video &selected = videos[ch.id][selected_video];
+    message_box("Description", text_wrap(selected.description, cols / 8 * 7));
+    //message_box("Description", selected.description);
 }
 
 using json = nlohmann::json;
@@ -549,14 +554,13 @@ void config_get_string_list(std::vector<std::string> &buffer, const json &obj, c
     }
 }
 
-int main()
+static void run()
 {
     const std::string module_path = get_module_path();
     user_home = std::string(std::getenv("HOME"));
     std::string database_filename = user_home + "/.local/share/yttui.db";
 
     curl_global_init(CURL_GLOBAL_ALL);
-    tp_init();
 
     const std::vector<std::string> config_locations{user_home + "/.config", module_path};
     std::string config_file;
@@ -665,9 +669,20 @@ int main()
         }
     } while (!exit);
 
-    tp_shutdown();
     db_shutdown();
     curl_global_cleanup();
+}
 
-    return 0;
+void run_standalone()
+{
+    tp_init();
+    run();
+    tp_shutdown();
+}
+
+void run_embedded(int pty_fd)
+{
+    tp_init_from_fd(pty_fd);
+    run();
+    tp_shutdown();
 }
