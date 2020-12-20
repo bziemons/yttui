@@ -30,3 +30,23 @@ tui_files = [
   'yttui.cpp',
 ]
 executable('yttui', tui_files, link_with: [application], install: true)
+
+qt5 = import('qt5')
+qt5_dep = dependency('qt5', modules: ['Core', 'Gui', 'Widgets'], required: false)
+if qt5_dep.found()
+    kf5service_dep = dependency('KF5Service', required: false)
+    kf5core_dep = dependency('KF5CoreAddons', required: false)
+    kf5parts_dep = dependency('KF5Parts', required: false)
+
+    cppc = meson.get_compiler('cpp')
+    libutil_dep = cppc.find_library('util')
+
+    moc_files = qt5.preprocess(moc_sources: ['yttui-qt5.cpp'], qresources: ['yttui-qt5.qrc'])
+
+    executable('yttui-qt5',
+        ['yttui-qt5.cpp', moc_files],
+        link_with: [application],
+        dependencies: [libutil_dep, qt5_dep, kf5service_dep, kf5core_dep, kf5parts_dep],
+        install: true
+    )
+endif

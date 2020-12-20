@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: MIT
+
+#include "application.h"
+
 #define _X_OPEN_SOURCE
 
 #include "tui.h"
@@ -34,6 +37,8 @@ size_t current_page_count = 0;
 size_t title_offset = 0;
 bool any_title_in_next_half = false;
 bool clear_channels_on_change = false;
+
+static application_host *host = nullptr;
 
 static termpaint_attr* get_attr(const AttributeSetType type, const bool highlight=false)
 {
@@ -368,18 +373,25 @@ void action_refresh_channel() {
     const int new_videos = fetch_videos_for_channel(channels.at(selected_channel));
     if(new_videos == 0 || ch.is_virtual)
         return;
-    if(new_videos == 1 && !notify_channel_new_video_command.empty()) {
-        run_command(notify_channel_new_video_command, {
-                        {"{{channelName}}", ch.name},
-                        {"{{videoTitle}}", videos[ch.id].front().title},
-                    });
-    } else if(notify_channel_new_videos_command.size()) {
-        run_command(notify_channel_new_videos_command, {
-                        {"{{channelName}}", ch.name},
-                        {"{{newVideos}}", std::to_string(new_videos)}
-                    });
+    if(new_videos == 1) {
+        if(host && host->notify_channel_single_video) {
+            host->notify_channel_single_video(ch.name, videos[ch.id].front().title);
+        } else if(!notify_channel_new_video_command.empty()) {
+            run_command(notify_channel_new_video_command, {
+                            {"{{channelName}}", ch.name},
+                            {"{{videoTitle}}", videos[ch.id].front().title},
+                        });
+        }
+    } else {
+        if(host && host->notify_channel_multiple_videos) {
+            host->notify_channel_multiple_videos(ch.name, new_videos);
+        } else if(notify_channel_new_videos_command.size()) {
+            run_command(notify_channel_new_videos_command, {
+                            {"{{channelName}}", ch.name},
+                            {"{{newVideos}}", std::to_string(new_videos)}
+                        });
+        }
     }
-
 }
 
 void action_refresh_all_channels(bool ask=true) {
@@ -395,11 +407,15 @@ void action_refresh_all_channels(bool ask=true) {
         if(count)
             updated_channels++;
     }
-    if(updated_channels && new_videos && !notify_channels_new_videos_command.empty()) {
-        run_command(notify_channels_new_videos_command, {
-                        {"{{updatedChannels}}", std::to_string(updated_channels)},
-                        {"{{newVideos}}", std::to_string(new_videos)}
-                    });
+    if(updated_channels && new_videos) {
+        if(host && host->notify_channels_multiple_videos) {
+            host->notify_channels_multiple_videos(updated_channels, new_videos);
+        } else if(!notify_channels_new_videos_command.empty()) {
+            run_command(notify_channels_new_videos_command, {
+                            {"{{updatedChannels}}", std::to_string(updated_channels)},
+                            {"{{newVideos}}", std::to_string(new_videos)}
+                        });
+        }
     }
 }
 
@@ -645,6 +661,10 @@ static void run()
 
     bool draw = true;
     do {
+        if(host && host->quit && host->quit()) {
+            break;
+        }
+
         if(draw) {
             Channel &channel = channels.at(selected_channel);
             termpaint_surface_clear(surface, TERMPAINT_DEFAULT_COLOR, TERMPAINT_DEFAULT_COLOR);
@@ -654,7 +674,7 @@ static void run()
         }
         draw = true;
 
-        auto event = tp_wait_for_event(1000);
+        auto event = tp_wait_for_event(500);
         if(!event)
             abort();
 
@@ -683,9 +703,10 @@ void run_standalone()
     tp_shutdown();
 }
 
-void run_embedded(int pty_fd)
+void run_embedded(int pty_fd, application_host *_host)
 {
     tp_init_from_fd(pty_fd);
+    host = _host;
     run();
     tp_shutdown();
 }
