@@ -339,7 +339,7 @@ std::string get_string(const std::string &caption, const std::string &text, cons
 
         // FIXME: Correctly handle deletion of clusters with more than one codepoint e.g. ° or ä
         {TERMPAINT_EV_KEY, "Delete", 0, [&](){ if(input_pos < input.size()) { input.erase(input_pos, 1); } }, "Delete input forward"},
-        {TERMPAINT_EV_KEY, "Backspace", 0, [&](){ if(!input.empty()) { input.erase(input_pos - 1, 1); input_pos--; }}, "Delete input backward"},
+        {TERMPAINT_EV_KEY, "Backspace", 0, [&](){ if(input_pos > 0) { input.erase(input_pos - 1, 1); input_pos--; }}, "Delete input backward"},
 
         {TERMPAINT_EV_KEY, "Escape", 0, [&](){ input.clear(); done = true; }, "Abort input"},
         {TERMPAINT_EV_KEY, "Enter", 0, [&](){ done = true; }, "Confirm input"},
