@@ -52,7 +52,7 @@ static json api_request(const std::string &url, std::map<std::string, std::strin
 
     data.push_back(0);
 
-    int http_response = 0;
+    long http_response = 0;
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_response);
 
     curl_url_cleanup(u);
