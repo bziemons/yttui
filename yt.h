@@ -77,7 +77,7 @@ public:
     void load_info(sqlite3 *db);
     bool is_valid() const;
 
-    void save_user_flags(sqlite3 *db);
+    void save_user_flags(sqlite3 *db) const;
 
     unsigned int unwatched;
     size_t tui_name_width;

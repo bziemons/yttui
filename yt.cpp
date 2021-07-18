@@ -346,7 +346,7 @@ bool Channel::is_valid() const
     return !id.empty() && !name.empty();
 }
 
-void Channel::save_user_flags(sqlite3 *db)
+void Channel::save_user_flags(sqlite3 *db) const
 {
     sqlite3_stmt *query;
     SC(sqlite3_prepare_v2(db, "UPDATE channels SET user_flags = ?2 WHERE channelID = ?1;", -1, &query, nullptr));
@@ -388,7 +388,6 @@ std::vector<Video> Video::get_all_for_channel(const std::string &channel_id)
 
     while(sqlite3_step(query) == SQLITE_ROW) {
         videos.emplace_back(query);
-        Video video(query);
     }
     SC(sqlite3_finalize(query));
 
@@ -412,7 +411,6 @@ std::vector<Video> Video::get_all_with_filter(const ChannelFilter &filter)
 
     while(sqlite3_step(query) == SQLITE_ROW) {
         videos.emplace_back(query);
-        Video video(query);
     }
     SC(sqlite3_finalize(query));
 
