@@ -22,6 +22,7 @@ public:
     std::string name;
 
     UserFlag(sqlite3_stmt *row);
+    void save(sqlite3 *db) const;
 
     static UserFlag create(sqlite3 *db, const std::string &name);
     static int next_free(sqlite3 *db);

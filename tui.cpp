@@ -308,7 +308,7 @@ Button operator&(const Button &a, const Button &b)
     return Button((int)a & (int)b);
 }
 
-std::string get_string(const std::string &caption, const std::string &text, const Align align)
+std::string edit_string(const std::string &caption, const std::string &text, const std::string &value, const Align align)
 {
     const int cols = termpaint_surface_width(surface);
     const int rows = termpaint_surface_height(surface);
@@ -322,8 +322,8 @@ std::string get_string(const std::string &caption, const std::string &text, cons
 
     const int input_row = y + 1 + !text.empty();
 
-    std::string input;
-    size_t input_pos = 0;
+    std::string input = value;
+    size_t input_pos = value.size();
     termpaint_terminal_set_cursor_visible(terminal, true);
     termpaint_terminal_set_cursor_style(terminal, TERMPAINT_CURSOR_STYLE_BAR, true);
 
@@ -378,6 +378,11 @@ std::string get_string(const std::string &caption, const std::string &text, cons
     termpaint_terminal_set_cursor_visible(terminal, false);
     termpaint_terminal_set_cursor_style(terminal, TERMPAINT_CURSOR_STYLE_TERM_DEFAULT, false);
     return input;
+}
+
+std::string get_string(const std::string &caption, const std::string &text, const Align align)
+{
+    return edit_string(caption, text, std::string(), align);
 }
 
 std::vector<std::string> split(const std::string &str, const char delim, const unsigned int max_splits=0)

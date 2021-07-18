@@ -529,6 +529,22 @@ void action_add_new_user_flag() {
     userFlags.push_back(UserFlag::create(db, name));
 }
 
+void action_rename_user_flag() {
+    std::vector<std::string> names;
+    for(const UserFlag &flag: userFlags) {
+        names.push_back(flag.name);
+    }
+    int index = get_selection("Select flag to rename", names);
+    if(index < 0)
+        return;
+    UserFlag &flag = userFlags.at(index);
+    std::string name = edit_string("Enter new name", std::string(), flag.name);
+    if(name.empty())
+        return;
+    flag.name = name;
+    flag.save(db);
+}
+
 void action_manage_user_flags() {
     bool done = false;
 
@@ -551,6 +567,7 @@ void action_manage_user_flags() {
 
     std::vector<action> actions = {
         {TERMPAINT_EV_KEY, "F2", 0, action_add_new_user_flag, "Add new user flag"},
+        {TERMPAINT_EV_KEY, "F3", 0, action_rename_user_flag, "Rename user flag"},
         {TERMPAINT_EV_KEY, "Escape", 0, [&]{ done = true; }, "Stop user flag management"},
         {TERMPAINT_EV_KEY, "ArrowUp", 0, [&]{ if(selected_channel > 0) selected_channel--; }, "Previous channel"},
         {TERMPAINT_EV_KEY, "ArrowDown", 0, [&]{ if(selected_channel < channels.size()) selected_channel++; }, "Next channel"},

@@ -15,6 +15,16 @@ struct yt_config yt_config;
 
 UserFlag::UserFlag(sqlite3_stmt *row): id(get_int(row, 0)), name(get_string(row, 1)) {}
 
+void UserFlag::save(sqlite3 *db) const
+{
+    sqlite3_stmt *query;
+    SC(sqlite3_prepare_v2(db, "UPDATE user_flags SET name = ?2 WHERE flagId = ?1;", -1, &query, nullptr));
+    SC(sqlite3_bind_int(query, 1, id));
+    SC(sqlite3_bind_text(query, 2, name.c_str(), -1, SQLITE_TRANSIENT));
+    SC(sqlite3_step(query));
+    SC(sqlite3_finalize(query));
+}
+
 UserFlag UserFlag::create(sqlite3 *db, const std::string &name)
 {
     int next_flag = next_free(db);

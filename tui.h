@@ -81,6 +81,7 @@ std::string text_wrap(const std::string &text, const size_t desired_width);
 Button message_box(const std::string &caption, const std::string &text, const Button buttons=Button::Ok, const Button default_button=Button::Ok, const Align align=Align::Center);
 void draw_box_with_caption(int x, int y, int w, int h, const std::string &caption=std::string());
 int get_selection(const std::string &caption, const std::vector<std::string> &choices, size_t selected=0, const Align align=Align::Center);
+std::string edit_string(const std::string &caption, const std::string &text, const std::string &value, const Align align=Align::Center);
 std::string get_string(const std::string &caption, const std::string &text=std::string(), const Align align=Align::Center);
 
 struct progress_info;
