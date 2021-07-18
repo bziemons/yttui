@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-project('yttui', ['cpp'], default_options: ['buildtype=release', 'cpp_std=c++17'], version: '0.1.0')
+project('yttui', ['cpp'], default_options: ['buildtype=release', 'cpp_std=c++17'], version: '0.1.0', license: 'MIT')
 
 add_project_arguments('-Werror=return-type', language: 'cpp')
 
@@ -29,7 +29,11 @@ application = static_library('yttui-application', application_files, dependencie
 tui_files = [
   'yttui.cpp',
 ]
-executable('yttui', tui_files, link_with: [application], install: true)
+executable('yttui',
+    tui_files,
+    link_with: [application],
+    install: true
+)
 
 qt5 = import('qt5')
 qt5_dep = dependency('qt5', modules: ['Core', 'Gui', 'Widgets'], required: false)
