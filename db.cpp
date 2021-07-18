@@ -78,6 +78,19 @@ CREATE TABLE videos (
 INSERT INTO settings(key, value) VALUES("schema_version", "1"); )";
         SC(sqlite3_exec(db, db_init_sql.c_str(), nullptr, nullptr, nullptr));
     }
+    if(schema_version < 2) {
+        const std::string sql = R"(
+ALTER TABLE channels ADD COLUMN user_flags INTEGER DEFAULT 0;
+CREATE TABLE user_flags (
+    flagId INTEGER PRIMARY KEY,
+    name TEXT NOT NULL
+);
+ALTER TABLE videos ADD COLUMN added_to_playlist TEXT;
+UPDATE videos SET added_to_playlist = published, published = "";
+UPDATE settings SET value="2" WHERE key="schema_version";
+)";
+        SC(sqlite3_exec(db, sql.c_str(), nullptr, nullptr, nullptr));
+    }
 }
 
 std::string db_get_setting(const std::string &key)
