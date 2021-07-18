@@ -5,11 +5,67 @@
 #include <nlohmann/json.hpp>
 #include <curl/curl.h>
 
+#include <cinttypes>
+
 #include "tui.h"
 #include "db.h"
 
 using json = nlohmann::json;
 struct yt_config yt_config;
+
+UserFlag::UserFlag(sqlite3_stmt *row): id(get_int(row, 0)), name(get_string(row, 1)) {}
+
+UserFlag UserFlag::create(sqlite3 *db, const std::string &name)
+{
+    int next_flag = next_free(db);
+    if(next_flag == -1) {
+        tui_abort("Out of UserFlags...");
+    }
+
+    sqlite3_stmt *query;
+    SC(sqlite3_prepare_v2(db, "INSERT INTO user_flags(flagId, name) values(?1, ?2);", -1, &query, nullptr));
+    SC(sqlite3_bind_int(query, 1, next_flag));
+    SC(sqlite3_bind_text(query, 2, name.c_str(), -1, nullptr));
+    SC(sqlite3_step(query));
+    SC(sqlite3_finalize(query));
+
+    return UserFlag(next_flag, name);
+}
+
+int UserFlag::next_free(sqlite3 *db)
+{
+    int64_t flag = 1;
+    sqlite3_stmt *query;
+    SC(sqlite3_prepare_v2(db, "SELECT flagId FROM user_flags ORDER BY flagId;", -1, &query, nullptr));
+    while(sqlite3_step(query) == SQLITE_ROW) {
+        const int fid = get_int(query, 0);
+        if(flag != fid) {
+            tui_abort("Invalid UserFlag " PRId64 ". Expected " PRId64, fid, flag);
+        }
+        flag <<= 1;
+    }
+    SC(sqlite3_finalize(query));
+
+    if(flag > (2L<<32))
+        return -1;
+    return flag;
+}
+
+std::vector<UserFlag> UserFlag::get_all(sqlite3 *db)
+{
+    std::vector<UserFlag> out;
+
+    sqlite3_stmt *query;
+    SC(sqlite3_prepare_v2(db, "SELECT * FROM user_flags ORDER BY flagId;", -1, &query, nullptr));
+    while(sqlite3_step(query) == SQLITE_ROW) {
+        out.emplace_back(query);
+    }
+    SC(sqlite3_finalize(query));
+
+    return out;
+}
+
+UserFlag::UserFlag(int id, const std::string &name): id(id), name(name) {}
 
 static size_t curl_writecallback(void *data, size_t size, size_t nmemb, void *userp)
 {
@@ -68,11 +124,13 @@ static json api_request(const std::string &url, std::map<std::string, std::strin
     return {};
 }
 
-Channel::Channel(sqlite3_stmt *row): id(get_string(row, 0)), name(get_string(row, 1)), is_virtual(false), virtual_flag(kNone), virtual_flag_value(false), unwatched(0), tui_name_width(0)
+Channel::Channel(sqlite3_stmt *row): id(get_string(row, 0)), name(get_string(row, 1)), is_virtual(false),
+    virtual_flag(kNone), virtual_flag_value(false), user_flags(get_int(row, 2)), unwatched(0), tui_name_width(0)
 {
 }
 
-Channel::Channel(const std::string &id, const std::string &name): id(id), name(name), is_virtual(false), virtual_flag(kNone), virtual_flag_value(false), unwatched(0), tui_name_width(0)
+Channel::Channel(const std::string &id, const std::string &name): id(id), name(name), is_virtual(false),
+    virtual_flag(kNone), virtual_flag_value(false), user_flags(0), unwatched(0), tui_name_width(0)
 {
 }
 
@@ -102,7 +160,7 @@ Channel Channel::add(sqlite3 *db, const std::string &selector, const std::string
     const std::string channel_name = response["items"][0]["snippet"]["title"];
 
     sqlite3_stmt *query;
-    SC(sqlite3_prepare_v2(db, "INSERT INTO channels(channelId, name) VALUES(?1, ?2);", -1, &query, nullptr));
+    SC(sqlite3_prepare_v2(db, "INSERT INTO channels(channelId, name, user_flags) VALUES(?1, ?2, 0);", -1, &query, nullptr));
     SC(sqlite3_bind_text(query, 1, channel_id.c_str(), -1, SQLITE_TRANSIENT));
     SC(sqlite3_bind_text(query, 2, channel_name.c_str(), -1, SQLITE_TRANSIENT));
     sqlite3_step(query);
@@ -270,6 +328,16 @@ void Channel::load_info(sqlite3 *db)
 bool Channel::is_valid() const
 {
     return !id.empty() && !name.empty();
+}
+
+void Channel::save_user_flags(sqlite3 *db)
+{
+    sqlite3_stmt *query;
+    SC(sqlite3_prepare_v2(db, "UPDATE channels SET user_flags = ?2 WHERE channelID = ?1;", -1, &query, nullptr));
+    SC(sqlite3_bind_text(query, 1, id.c_str(), -1, SQLITE_TRANSIENT));
+    SC(sqlite3_bind_int(query, 2, user_flags));
+    SC(sqlite3_step(query));
+    SC(sqlite3_finalize(query));
 }
 
 Video::Video(sqlite3_stmt *row): id(get_string(row, 0)), channel_id(get_string(row, 1)), title(get_string(row, 2)),

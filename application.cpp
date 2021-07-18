@@ -26,6 +26,7 @@
 
 static std::string user_home;
 
+std::vector<UserFlag> userFlags;
 std::vector<Channel> channels;
 std::unordered_map<std::string, std::vector<Video>> videos;
 
@@ -515,6 +516,97 @@ void action_show_video_detail() {
     //message_box("Description", selected.description);
 }
 
+void action_add_new_user_flag() {
+    std::string name = get_string("Flag name");
+    if(name.empty())
+        return;
+    userFlags.push_back(UserFlag::create(db, name));
+}
+
+void action_manage_user_flags() {
+    bool done = false;
+
+    constexpr const char userflag_keys[] = "1234567890"
+                                           "abcdefghij"
+                                           "klmnopqrst"
+                                           "uv";
+    const std::string userflag_keys_str(userflag_keys);
+    // +1 to accomodate for the 0 byte at the end
+    static_assert(sizeof(userflag_keys) == UserFlag::max_flag_count + 1, "There must be a key for each UserFlag");
+
+    size_t channel_name_width = 0;
+    for(const Channel &c: channels) {
+        channel_name_width = std::max(channel_name_width, c.tui_name_width);
+    }
+
+    const char *box_chars[] = {"┬", "│", "┴"};
+    size_t selected_channel = 0;
+    char key_buf[] = " ";
+
+    std::vector<action> actions = {
+        {TERMPAINT_EV_KEY, "F2", 0, action_add_new_user_flag, "Add new user flag"},
+        {TERMPAINT_EV_KEY, "Escape", 0, [&]{ done = true; }, "Stop user flag management"},
+        {TERMPAINT_EV_KEY, "ArrowUp", 0, [&]{ if(selected_channel > 0) selected_channel--; }, "Previous channel"},
+        {TERMPAINT_EV_KEY, "ArrowDown", 0, [&]{ if(selected_channel < channels.size()) selected_channel++; }, "Next channel"},
+        {EV_IGNORE, "1..0,a..v", 0, nullptr, "Toggle user flags for selected channel"},
+    };
+
+    do {
+        size_t flag_name_width = 0;
+        for(const UserFlag &flag: userFlags) {
+            flag_name_width = std::max(flag_name_width, string_width(flag.name));
+        }
+
+        const size_t content_rows_needed = std::max(userFlags.size(), channels.size());
+        const size_t box_cols = 1 + channel_name_width + 3 + 2 + flag_name_width + 1;
+        const size_t box_rows = 1 + content_rows_needed + 1;
+
+        const size_t channel_name_pos = 1;
+        const size_t divider_pos = channel_name_pos + channel_name_width + 1;
+        const size_t flag_char_pos = divider_pos + 1;
+        const size_t flag_name_pos = flag_char_pos + 2;
+
+        Channel &current_channel = channels[selected_channel];
+
+        draw_box_with_caption(0, 0, box_cols, box_rows);
+        for(size_t row=0; row<box_rows; row++) {
+            if(row<channels.size()) {
+                termpaint_surface_write_with_attr(surface, channel_name_pos, 1 + row, channels[row].name.c_str(), get_attr(ASNormal, selected_channel == row));
+            }
+            const char *box_char = box_chars[(row > 0) + (row+1 == box_rows)];
+            termpaint_surface_write_with_attr(surface, divider_pos, row, box_char, get_attr(ASNormal, false));
+            if(!current_channel.is_virtual && row < userFlags.size()) {
+                const UserFlag &flag = userFlags.at(row);
+                termpaint_attr *attr = get_attr(current_channel.user_flags & flag.id ? ASUnwatched : ASWatched, false);
+                key_buf[0] = userflag_keys[int(log2(flag.id))];
+                termpaint_surface_write_with_attr(surface, flag_char_pos, 1 + row, key_buf, attr);
+                termpaint_surface_write_with_attr(surface, flag_name_pos, 1 + row, flag.name.c_str(), attr);
+            }
+        }
+        tp_flush(false);
+
+        auto event = tp_wait_for_event();
+        if(!event)
+            abort();
+
+        if(!tui_handle_action(*event, actions)) {
+            if(event->type == TERMPAINT_EV_CHAR && event->string.length() == 1) {
+                if(current_channel.is_virtual)
+                    continue;
+                const size_t index = userflag_keys_str.find(event->string[0]);
+                if(index == std::string::npos)
+                    continue;
+                if(std::find_if(userFlags.cbegin(), userFlags.cend(),
+                                [&](const UserFlag &f) { return f.id == (1<<index); }) == userFlags.cend())
+                    continue;
+
+                current_channel.user_flags ^= (1 << index);
+                current_channel.save_user_flags(db);
+            }
+        }
+    } while (!done);
+}
+
 using json = nlohmann::json;
 std::optional<json> load_json(const std::string &filename) {
     std::ifstream ifs(filename);
@@ -622,6 +714,8 @@ static void run()
     std::chrono::system_clock::time_point last_user_action;
 
     db_init(database_filename);
+
+    userFlags = UserFlag::get_all(db);
     make_virtual_unwatched_channel();
     for(Channel &channel: Channel::get_all(db)) {
         add_channel_to_list(channel);
@@ -657,6 +751,7 @@ static void run()
         {TERMPAINT_EV_KEY, "ArrowLeft", 0, action_scroll_title_left, "Scroll title left"},
         {TERMPAINT_EV_KEY, "ArrowRight", 0, action_scroll_title_right, "Scroll title right"},
         {TERMPAINT_EV_CHAR, "l", TERMPAINT_MOD_CTRL, [&](){ force_repaint = true; }, "Force redraw"},
+        {TERMPAINT_EV_KEY, "F2", 0, action_manage_user_flags, "Manage user flags"},
     };
 
     bool draw = true;

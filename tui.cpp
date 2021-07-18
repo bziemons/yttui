@@ -207,7 +207,7 @@ public:
 
 };
 
-static void draw_box_with_caption(int x, int y, int w, int h, const std::string &caption=std::string())
+void draw_box_with_caption(int x, int y, int w, int h, const std::string &caption)
 {
     termpaint_surface_clear_rect(surface, x, y, w, h, TERMPAINT_DEFAULT_COLOR, TERMPAINT_DEFAULT_COLOR);
     const int fill = w - 2;

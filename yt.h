@@ -15,6 +15,24 @@ extern struct yt_config {
     std::map<std::string, std::string> extra_headers;
 } yt_config;
 
+class UserFlag
+{
+public:
+    int id;
+    std::string name;
+
+    UserFlag(sqlite3_stmt *row);
+
+    static UserFlag create(sqlite3 *db, const std::string &name);
+    static int next_free(sqlite3 *db);
+    static std::vector<UserFlag> get_all(sqlite3 *db);
+
+    static constexpr int max_flag_count = (sizeof(uint32_t)*8);
+
+private:
+    UserFlag(int id, const std::string &name);
+};
+
 enum VideoFlag {
     kNone = 0,
     kWatched = (1<<0),
@@ -30,6 +48,8 @@ public:
     VideoFlag virtual_flag;
     bool virtual_flag_value;
 
+    int user_flags;
+
     Channel(sqlite3_stmt *row);
     static Channel add(sqlite3 *db, const std::string &selector, const std::string &value);
     static Channel add_virtual(const std::string &name, const VideoFlag virtual_flag=kNone, const bool virtual_flag_value=true);
@@ -39,6 +59,8 @@ public:
     int fetch_new_videos(sqlite3 *db, progress_info *info=nullptr, std::optional<std::string> after={}, std::optional<int> max_count={});
     void load_info(sqlite3 *db);
     bool is_valid() const;
+
+    void save_user_flags(sqlite3 *db);
 
     unsigned int unwatched;
     size_t tui_name_width;

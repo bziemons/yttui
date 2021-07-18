@@ -18,6 +18,11 @@ std::string get_string(sqlite3_stmt *row, int col)
     return std::string((char*)sqlite3_column_text(row, col));
 }
 
+int get_int(sqlite3_stmt *row, int col)
+{
+    return sqlite3_column_int(row, col);
+}
+
 void db_check_schema();
 
 void db_init(const std::string &filename)

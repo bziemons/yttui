@@ -16,6 +16,7 @@ public:
     ~db_transaction();
 };
 std::string get_string(sqlite3_stmt *row, int col);
+int get_int(sqlite3_stmt *row, int col);
 
 void db_init(const std::string &filename);
 void db_shutdown();
