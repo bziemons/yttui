@@ -218,31 +218,33 @@ bool video_is_known(sqlite3 *db, const std::string &channel_id, const std::strin
     return known;
 }
 
-void add_video(sqlite3 *db, const json &snippet, const std::string &channel_id) {
+void add_video(sqlite3 *db, const json &snippet, const json &content_details, const std::string &channel_id) {
     const std::string video_id = snippet["resourceId"]["videoId"];
     const std::string title = snippet["title"];
     const std::string description = snippet["description"];
     const int flags = 0;
-    const std::string published = snippet["publishedAt"];
+    const std::string added_to_playlist = snippet["publishedAt"];
+    const std::string published = content_details["videoPublishedAt"];
 
     sqlite3_stmt *query;
-    SC(sqlite3_prepare_v2(db, "INSERT INTO videos (videoId, channelId, title, description, flags, published) values(?1,?2,?3,?4,?5,?6);", -1, &query, nullptr));
+    SC(sqlite3_prepare_v2(db, "INSERT INTO videos (videoId, channelId, title, description, flags, added_to_playlist, published) values(?1,?2,?3,?4,?5,?6,?7);", -1, &query, nullptr));
     SC(sqlite3_bind_text(query, 1, video_id.c_str(), -1, SQLITE_TRANSIENT));
     SC(sqlite3_bind_text(query, 2, channel_id.c_str(), -1, SQLITE_TRANSIENT));
     SC(sqlite3_bind_text(query, 3, title.c_str(), -1, SQLITE_TRANSIENT));
     SC(sqlite3_bind_text(query, 4, description.c_str(), -1, SQLITE_TRANSIENT));
     SC(sqlite3_bind_int(query, 5, flags));
-    SC(sqlite3_bind_text(query, 6, published.c_str(), -1, SQLITE_TRANSIENT));
+    SC(sqlite3_bind_text(query, 6, added_to_playlist.c_str(), -1, SQLITE_TRANSIENT));
+    SC(sqlite3_bind_text(query, 7, published.c_str(), -1, SQLITE_TRANSIENT));
     sqlite3_step(query);
     SC(sqlite3_finalize(query));
 }
 
 
-int Channel::fetch_new_videos(sqlite3 *db, progress_info *info, std::optional<std::string> after, std::optional<int> max_count)
+int Channel::fetch_new_videos(sqlite3 *db, progress_info *info, std::optional<std::string> after, std::optional<int> max_count) const
 {
     const std::string playlist_id = upload_playlist();
     std::map<std::string, std::string> params = {
-        {"part", "snippet"},
+        {"part", "snippet,contentDetails"},
         {"playlistId", playlist_id},
         {"maxResults", "50"},
         {"key", yt_config.api_key},
@@ -260,13 +262,15 @@ int Channel::fetch_new_videos(sqlite3 *db, progress_info *info, std::optional<st
 
         for(auto &item: response["items"]) {
             auto snippet = item["snippet"];
+            auto content_details = item["contentDetails"];
             std::string channel_id = snippet["channelId"];
             std::string video_id = snippet["resourceId"]["videoId"];
             std::string title = snippet["title"];
 
             if(after) {
-                auto publishedAt = snippet["publishedAt"];
-                if(publishedAt < *after) {
+                auto addedToPlaylistAt = snippet["publishedAt"];
+                auto publishedAt = content_details["videoPublishedAt"];
+                if(addedToPlaylistAt < *after) {
                     //fprintf(stderr, "Stopping at video '%s': Too old.\r\n", title.c_str());
                     abort = true;
                     break;
@@ -279,7 +283,7 @@ int Channel::fetch_new_videos(sqlite3 *db, progress_info *info, std::optional<st
                 break;
             }
 
-            add_video(db, snippet, channel_id);
+            add_video(db, snippet, content_details, channel_id);
             //fprintf(stderr, "New video: '%s': %s.\r\n", title.c_str(), video_id.c_str());
             processed++;
             if(max_count && processed >= *max_count) {
@@ -341,8 +345,8 @@ void Channel::save_user_flags(sqlite3 *db)
 }
 
 Video::Video(sqlite3_stmt *row): id(get_string(row, 0)), channel_id(get_string(row, 1)), title(get_string(row, 2)),
-    description(get_string(row, 3)), flags(sqlite3_column_int(row, 4)), published(get_string(row, 5)),
-    tui_title_width(0)
+    description(get_string(row, 3)), flags(sqlite3_column_int(row, 4)), added_to_playlist(get_string(row, 6)),
+    published(get_string(row, 5)), tui_title_width(0)
 {
 }
 
@@ -367,7 +371,7 @@ std::vector<Video> Video::get_all_for_channel(const std::string &channel_id)
     std::vector<Video> videos;
 
     sqlite3_stmt *query;
-    SC(sqlite3_prepare_v2(db, "SELECT * FROM videos WHERE channelId=?1 ORDER BY published DESC;", -1, &query, nullptr));
+    SC(sqlite3_prepare_v2(db, "SELECT * FROM videos WHERE channelId=?1 ORDER BY published DESC, added_to_playlist DESC;", -1, &query, nullptr));
     SC(sqlite3_bind_text(query, 1, channel_id.c_str(), -1, SQLITE_TRANSIENT));
 
     while(sqlite3_step(query) == SQLITE_ROW) {
@@ -384,7 +388,7 @@ std::vector<Video> Video::get_all_with_flag_value(const VideoFlag flag, const in
     std::vector<Video> videos;
 
     sqlite3_stmt *query;
-    SC(sqlite3_prepare_v2(db, "SELECT * FROM videos WHERE flags & ?1 = ?2 ORDER BY published DESC;", -1, &query, nullptr));
+    SC(sqlite3_prepare_v2(db, "SELECT * FROM videos WHERE flags & ?1 = ?2 ORDER BY published DESC, added_to_playlist DESC;", -1, &query, nullptr));
     SC(sqlite3_bind_int(query, 1, flag));
     SC(sqlite3_bind_int(query, 2, value));
 

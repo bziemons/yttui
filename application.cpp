@@ -118,7 +118,8 @@ void draw_channel_list(const std::vector<Video> &videos, bool show_channel_name=
 
         struct tm tm;
         memset(&tm, 0, sizeof(tm));
-        if(strptime(video.published.c_str(), "%FT%T%z", &tm) != nullptr) {
+        const std::string &date_str = !video.published.empty() ? video.published : video.added_to_playlist;
+        if(strptime(date_str.c_str(), "%FT%T%z", &tm) != nullptr) {
             strftime(dt.data(), date_width + 10, "%F %H:%M", &tm);
         }
 
