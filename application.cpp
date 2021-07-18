@@ -513,8 +513,13 @@ void action_show_video_detail() {
 
     const Channel &ch = channels.at(selected_channel);
     const Video &selected = videos[ch.id][selected_video];
-    message_box("Description", text_wrap(selected.description, cols / 8 * 7));
-    //message_box("Description", selected.description);
+    std::string text;
+    text.append("Video:\t").append(selected.title).append("\n");
+    text.append("Published:\t").append(selected.published).append("\n");
+    text.append("Added to playlist:\t").append(selected.added_to_playlist).append("\n");
+    text.append("\n").append(selected.description);
+
+    message_box("Video Information", text_wrap(text, cols / 8 * 7));
 }
 
 void action_add_new_user_flag() {
@@ -742,7 +747,8 @@ static void run()
         {TERMPAINT_EV_CHAR, "W", 0, action_mark_all_videos_watched, "Mark channel as watched"},
         {TERMPAINT_EV_CHAR, "q", TERMPAINT_MOD_CTRL, [&](){ exit = true; }, "Quit"},
 
-        //{TERMPAINT_EV_KEY, "Enter", 0, action_show_video_detail, "Show video details"},
+        {TERMPAINT_EV_KEY, "Enter", 0, action_show_video_detail, "Show video details"},
+        {TERMPAINT_EV_KEY, "Space", 0, action_show_video_detail, "Show video details"},
         {TERMPAINT_EV_KEY, "ArrowUp", 0, action_select_prev_video, "Previous video"},
         {TERMPAINT_EV_KEY, "ArrowDown", 0, action_select_next_video, "Next video"},
         {TERMPAINT_EV_KEY, "PageUp", 0, action_select_prev_video_page, "Previous video page"},
