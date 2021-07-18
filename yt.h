@@ -40,20 +40,36 @@ enum VideoFlag {
     kDownloaded = (1<<1),
 };
 
+class ChannelFilter {
+public:
+    int id;
+    std::string name;
+
+    uint32_t video_mask;
+    uint32_t video_value;
+
+    uint32_t user_mask;
+    uint32_t user_value;
+
+    ChannelFilter();
+
+private:
+    ChannelFilter(const int id, const std::string &name);
+};
+
 class Channel
 {
 public:
     std::string id;
     std::string name;
     bool is_virtual;
-    VideoFlag virtual_flag;
-    bool virtual_flag_value;
+    ChannelFilter filter;
 
     int user_flags;
 
     Channel(sqlite3_stmt *row);
     static Channel add(sqlite3 *db, const std::string &selector, const std::string &value);
-    static Channel add_virtual(const std::string &name, const VideoFlag virtual_flag=kNone, const bool virtual_flag_value=true);
+    static Channel add_virtual(const std::string &name, const ChannelFilter filter);
     static std::vector<Channel> get_all(sqlite3 *db);
 
     std::string upload_playlist() const;
@@ -82,7 +98,7 @@ struct Video
     Video(sqlite3_stmt *row);
     void set_flag(sqlite3 *db, VideoFlag flag, bool value=true);
     static std::vector<Video> get_all_for_channel(const std::string &channel_id);
-    static std::vector<Video> get_all_with_flag_value(const VideoFlag flag, const int value);
+    static std::vector<Video> get_all_with_filter(const ChannelFilter &filter);
 
     size_t tui_title_width;
 };

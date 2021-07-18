@@ -138,12 +138,12 @@ static json api_request(const std::string &url, const std::map<std::string, std:
 }
 
 Channel::Channel(sqlite3_stmt *row): id(get_string(row, 0)), name(get_string(row, 1)), is_virtual(false),
-    virtual_flag(kNone), virtual_flag_value(false), user_flags(get_int(row, 2)), unwatched(0), tui_name_width(0)
+    user_flags(get_int(row, 2)), unwatched(0), tui_name_width(0)
 {
 }
 
 Channel::Channel(const std::string &id, const std::string &name): id(id), name(name), is_virtual(false),
-    virtual_flag(kNone), virtual_flag_value(false), user_flags(0), unwatched(0), tui_name_width(0)
+    user_flags(0), unwatched(0), tui_name_width(0)
 {
 }
 
@@ -182,14 +182,13 @@ Channel Channel::add(sqlite3 *db, const std::string &selector, const std::string
     return Channel(channel_id, channel_name);
 }
 
-Channel Channel::add_virtual(const std::string &name, const VideoFlag virtual_flag, const bool virtual_flag_value)
+Channel Channel::add_virtual(const std::string &name, const ChannelFilter filter)
 {
     std::string id = name;
     std::transform(id.begin(), id.end(), id.begin(), [](char c){ return std::isalnum(c) ? std::tolower(c) : '-'; });
     Channel channel("virtual-" + id, name);
     channel.is_virtual = true;
-    channel.virtual_flag = virtual_flag;
-    channel.virtual_flag_value = virtual_flag_value;
+    channel.filter = filter;
     return channel;
 }
 
@@ -396,14 +395,20 @@ std::vector<Video> Video::get_all_for_channel(const std::string &channel_id)
     return videos;
 }
 
-std::vector<Video> Video::get_all_with_flag_value(const VideoFlag flag, const int value)
+std::vector<Video> Video::get_all_with_filter(const ChannelFilter &filter)
 {
     std::vector<Video> videos;
 
     sqlite3_stmt *query;
-    SC(sqlite3_prepare_v2(db, "SELECT * FROM videos WHERE flags & ?1 = ?2 ORDER BY published DESC, added_to_playlist DESC;", -1, &query, nullptr));
-    SC(sqlite3_bind_int(query, 1, flag));
-    SC(sqlite3_bind_int(query, 2, value));
+    SC(sqlite3_prepare_v2(db, R"(SELECT videos.*, channels.user_flags
+                                 FROM videos JOIN channels ON videos.channelId = channels.channelId
+                                 WHERE videos.flags & ?1 = ?2
+                                   AND channels.user_flags & ?3 = ?4
+                                 ORDER BY published DESC, added_to_playlist DESC;)", -1, &query, nullptr));
+    SC(sqlite3_bind_int(query, 1, filter.video_mask));
+    SC(sqlite3_bind_int(query, 2, filter.video_value));
+    SC(sqlite3_bind_int(query, 3, filter.user_mask));
+    SC(sqlite3_bind_int(query, 4, filter.user_value));
 
     while(sqlite3_step(query) == SQLITE_ROW) {
         videos.emplace_back(query);
@@ -412,4 +417,13 @@ std::vector<Video> Video::get_all_with_flag_value(const VideoFlag flag, const in
     SC(sqlite3_finalize(query));
 
     return videos;
+}
+
+ChannelFilter::ChannelFilter(): id(-1), name(std::string()), video_mask(0), video_value(0), user_mask(0), user_value(0)
+{
+}
+
+ChannelFilter::ChannelFilter(const int id, const std::string &name): id(id), name(name),
+    video_mask(0), video_value(0), user_mask(0), user_value(0)
+{
 }

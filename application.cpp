@@ -165,7 +165,7 @@ void load_videos_for_channel(const Channel &channel, bool force=false)
 
     std::vector<Video> &channelVideos = videos[channel.id];
     if(channel.is_virtual) {
-        channelVideos = Video::get_all_with_flag_value(channel.virtual_flag, channel.virtual_flag_value);
+        channelVideos = Video::get_all_with_filter(channel.filter);
     } else {
         channelVideos = Video::get_all_for_channel(channel.id);
     }
@@ -182,7 +182,7 @@ int fetch_videos_for_channel(Channel &channel, bool name_in_title=false)
 {
     if(channel.is_virtual) {
         std::vector<Video> &channelVideos = videos[channel.id];
-        channelVideos = Video::get_all_with_flag_value(channel.virtual_flag, channel.virtual_flag_value);
+        channelVideos = Video::get_all_with_filter(channel.filter);
         for(Video &video: channelVideos) {
             video.tui_title_width = string_width(video.title);
         }
@@ -267,9 +267,11 @@ void add_channel_to_list(Channel &channel)
 
 void make_virtual_unwatched_channel()
 {
-    Channel channel = Channel::add_virtual("All Unwatched", kWatched, false);
+    ChannelFilter filter;
+    filter.video_mask = kWatched;
+    Channel channel = Channel::add_virtual("All Unwatched", filter);
     std::vector<Video> &channelVideos = videos[channel.id];
-    channelVideos = Video::get_all_with_flag_value(channel.virtual_flag, channel.virtual_flag_value);
+    channelVideos = Video::get_all_with_filter(channel.filter);
     for(Video &video: channelVideos) {
         video.tui_title_width = string_width(video.title);
     }
