@@ -641,7 +641,7 @@ std::string text_wrap(const std::string &text, const size_t desired_width)
     return out;
 }
 
-void tui_abort(std::string message)
+void tui_abort(const std::string &message)
 {
     const size_t cols = termpaint_surface_width(surface);
 
@@ -705,7 +705,7 @@ static void draw_help(const std::vector<helpitem> &items)
         to_show.append("\n");
     }
 
-    message_box("Help", to_show.c_str());
+    message_box("Help", to_show);
 }
 
 static std::string format_key(const action &action) {

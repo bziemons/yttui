@@ -86,7 +86,7 @@ std::string db_get_setting(const std::string &key)
     SC(sqlite3_prepare_v2(db, "SELECT value FROM settings WHERE key = ?1;", -1, &query, nullptr));
     SC(sqlite3_bind_text(query, 1, key.c_str(), -1, SQLITE_TRANSIENT));
     SC(sqlite3_step(query));
-    const std::string value = get_string(query, 0);
+    std::string value = get_string(query, 0);
     SC(sqlite3_finalize(query));
     return value;
 }

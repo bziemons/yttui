@@ -24,7 +24,7 @@
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>
 
-static std::string user_home;
+std::string user_home;
 
 std::vector<UserFlag> userFlags;
 std::vector<Channel> channels;
@@ -60,6 +60,7 @@ void draw_channel_list(const std::vector<Video> &videos, bool show_channel_name=
     const size_t available_rows = rows - 2;
     videos_per_page = available_rows;
     const int cur_page = selected_video / available_rows;
+    const int pages = videos.size() / available_rows;
 
     size_t cur_entry = 0;
 
@@ -87,9 +88,7 @@ void draw_channel_list(const std::vector<Video> &videos, bool show_channel_name=
     const size_t last_name_column = cols;
     const size_t name_quater = (last_name_column - first_name_column) / 4;
 
-    const int pages = videos.size() / available_rows;
-
-    const std::string channel_name = std::string("Channel: ") + channels[selected_channel].name.c_str();
+    const std::string channel_name = std::string("Channel: ") + channels[selected_channel].name;
     termpaint_surface_write_with_attr(surface, 0, 0, channel_name.c_str(), get_attr(ASNormal));
 
     if(pages > 1) {
@@ -324,15 +323,16 @@ void action_add_channel_by_id()
 }
 
 void action_select_channel() {
-    if(channels.size()) {
+    if(channels.empty()) {
+        message_box("Can't select channel", "No channels configured.\n Please configure one.");
+    } else {
         std::vector<std::string> names;
+        names.reserve(channels.size());
         for(const Channel &c: channels)
             names.push_back(c.name + " (" + std::to_string(c.unwatched) + ")");
         const int channel = get_selection("Switch Channel", names, selected_channel, Align::VCenter | Align::Left);
         if(channel != -1)
             select_channel_by_index(channel);
-    } else {
-        message_box("Can't select channel", "No channels configured.\n Please configure one.");
     }
 }
 
@@ -387,7 +387,7 @@ void action_refresh_channel() {
     } else {
         if(host && host->notify_channel_multiple_videos) {
             host->notify_channel_multiple_videos(ch.name, new_videos);
-        } else if(notify_channel_new_videos_command.size()) {
+        } else if(!notify_channel_new_videos_command.empty()) {
             run_command(notify_channel_new_videos_command, {
                             {"{{channelName}}", ch.name},
                             {"{{newVideos}}", std::to_string(new_videos)}
@@ -397,7 +397,7 @@ void action_refresh_channel() {
 }
 
 void action_refresh_all_channels(bool ask=true) {
-    if(ask && message_box("Refresh all channels?", ("Do you want to refresh all " + std::to_string(channels.size()) + " channels?").c_str(), Button::Yes | Button::No, Button::No) != Button::Yes)
+    if(ask && message_box("Refresh all channels?", "Do you want to refresh all " + std::to_string(channels.size()) + " channels?", Button::Yes | Button::No, Button::No) != Button::Yes)
         return;
     int updated_channels = 0;
     int new_videos = 0;
@@ -449,7 +449,7 @@ void action_mark_video_unwatched() {
 
 void action_mark_all_videos_watched() {
     Channel &ch = channels.at(selected_channel);
-    if(message_box("Mark all as watched", ("Do you want to mark all videos of " + ch.name + " as watched?").c_str(), Button::Yes | Button::No, Button::No) != Button::Yes)
+    if(message_box("Mark all as watched", "Do you want to mark all videos of " + ch.name + " as watched?", Button::Yes | Button::No, Button::No) != Button::Yes)
         return;
     {
         db_transaction transaction;
@@ -727,7 +727,7 @@ static void run()
         add_channel_to_list(channel);
     }
 
-    if(channels.size()) {
+    if(!channels.empty()) {
         select_channel_by_index(0);
     }
 

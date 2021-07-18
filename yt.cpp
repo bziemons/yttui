@@ -78,18 +78,21 @@ static size_t curl_writecallback(void *data, size_t size, size_t nmemb, void *us
     return to_add;
 }
 
-static json api_request(const std::string &url, std::map<std::string, std::string> params)
+static json api_request(const std::string &url, const std::map<std::string, std::string> &params)
 {
     CURL *curl = curl_easy_init();
     curl_slist *headers = nullptr;
     for(const auto &[header, value]: yt_config.extra_headers) {
-        headers = curl_slist_append(headers, (header + ": " + value).c_str());
+        std::string h = header;
+        h.append(": ").append(value);
+        headers = curl_slist_append(headers, h.c_str());
     }
 
     CURLU *u = curl_url();
     curl_url_set(u, CURLUPART_URL, url.c_str(), 0);
     for(const auto &[k, v]: params) {
-        std::string p = k + "=" + v;
+        std::string p = k;
+        p.append("=").append(v);
         curl_url_set(u, CURLUPART_QUERY, p.c_str(), CURLU_APPENDQUERY|CURLU_URLENCODE);
     }
     char *real_url;

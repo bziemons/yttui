@@ -88,5 +88,5 @@ progress_info* begin_progress(const std::string &caption, const int width, const
 void update_progress(progress_info *info, const int val, const int maxval);
 void end_progress(progress_info *info);
 
-void tui_abort(std::string message);
+void tui_abort(const std::string &message);
 void tui_abort(const char *fmt, ...);

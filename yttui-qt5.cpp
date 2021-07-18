@@ -182,7 +182,7 @@ int main(int argc, char *argv[])
     };
 
     appthread.start();
-    int rc = app.exec();
+    int rc = QApplication::exec();
     close(term_fd);
     close(app_fd);
 
