@@ -15,7 +15,10 @@ db_transaction::~db_transaction()
 
 std::string get_string(sqlite3_stmt *row, int col)
 {
-    return std::string((char*)sqlite3_column_text(row, col));
+    const unsigned char *cp = sqlite3_column_text(row, col);
+    if(cp)
+        return std::string((const char*)cp);
+    return std::string();
 }
 
 int get_int(sqlite3_stmt *row, int col)
@@ -86,7 +89,7 @@ CREATE TABLE user_flags (
     name TEXT NOT NULL
 );
 ALTER TABLE videos ADD COLUMN added_to_playlist TEXT;
-UPDATE videos SET added_to_playlist = published, published = "";
+UPDATE videos SET added_to_playlist = published, published = NULL;
 UPDATE settings SET value="2" WHERE key="schema_version";
 )";
         SC(sqlite3_exec(db, sql.c_str(), nullptr, nullptr, nullptr));

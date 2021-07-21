@@ -383,7 +383,7 @@ std::vector<Video> Video::get_all_for_channel(const std::string &channel_id)
     std::vector<Video> videos;
 
     sqlite3_stmt *query;
-    SC(sqlite3_prepare_v2(db, "SELECT * FROM videos WHERE channelId=?1 ORDER BY published DESC, added_to_playlist DESC;", -1, &query, nullptr));
+    SC(sqlite3_prepare_v2(db, "SELECT * FROM videos WHERE channelId=?1 ORDER BY coalesce(published, added_to_playlist) DESC;", -1, &query, nullptr));
     SC(sqlite3_bind_text(query, 1, channel_id.c_str(), -1, SQLITE_TRANSIENT));
 
     while(sqlite3_step(query) == SQLITE_ROW) {
@@ -403,7 +403,7 @@ std::vector<Video> Video::get_all_with_filter(const ChannelFilter &filter)
                                  FROM videos JOIN channels ON videos.channelId = channels.channelId
                                  WHERE videos.flags & ?1 = ?2
                                    AND channels.user_flags & ?3 = ?4
-                                 ORDER BY published DESC, added_to_playlist DESC;)", -1, &query, nullptr));
+                                 ORDER BY coalesce(published, added_to_playlist) DESC;)", -1, &query, nullptr));
     SC(sqlite3_bind_int(query, 1, filter.video_mask));
     SC(sqlite3_bind_int(query, 2, filter.video_value));
     SC(sqlite3_bind_int(query, 3, filter.user_mask));
