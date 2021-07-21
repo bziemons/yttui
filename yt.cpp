@@ -182,7 +182,7 @@ Channel Channel::add(sqlite3 *db, const std::string &selector, const std::string
     return Channel(channel_id, channel_name);
 }
 
-Channel Channel::add_virtual(const std::string &name, const ChannelFilter filter)
+Channel Channel::add_virtual(const std::string &name, const ChannelFilter &filter)
 {
     std::string id = name;
     std::transform(id.begin(), id.end(), id.begin(), [](char c){ return std::isalnum(c) ? std::tolower(c) : '-'; });
@@ -421,7 +421,57 @@ ChannelFilter::ChannelFilter(): id(-1), name(std::string()), video_mask(0), vide
 {
 }
 
+ChannelFilter::ChannelFilter(sqlite3_stmt *row): id(get_int(row, 0)), name(get_string(row, 1)),
+    video_mask(get_int(row, 2)), video_value(get_int(row, 3)), user_mask(get_int(row, 4)), user_value(get_int(row, 5))
+{
+}
+
 ChannelFilter::ChannelFilter(const int id, const std::string &name): id(id), name(name),
     video_mask(0), video_value(0), user_mask(0), user_value(0)
 {
+}
+
+
+void ChannelFilter::save(sqlite3 *db) const
+{
+    if(id < 0)
+        return;
+
+    sqlite3_stmt *query;
+    SC(sqlite3_prepare_v2(db, "UPDATE channel_filters SET name=?2, video_mask=?3, video_value=?4, user_mask=?5, user_value=?6 WHERE id = ?1;", -1, &query, nullptr));
+    SC(sqlite3_bind_int(query, 1, id));
+    SC(sqlite3_bind_text(query, 2, name.c_str(), -1, SQLITE_TRANSIENT));
+    SC(sqlite3_bind_int(query, 3, video_mask));
+    SC(sqlite3_bind_int(query, 4, video_value));
+    SC(sqlite3_bind_int(query, 5, user_mask));
+    SC(sqlite3_bind_int(query, 6, user_value));
+    SC(sqlite3_step(query));
+    SC(sqlite3_finalize(query));
+}
+
+ChannelFilter ChannelFilter::add(sqlite3 *db, const std::string &name)
+{
+    sqlite3_stmt *query;
+    SC(sqlite3_prepare_v2(db, "INSERT INTO channel_filters(name) values(?1);", -1, &query, nullptr));
+    SC(sqlite3_bind_text(query, 1, name.c_str(), -1, nullptr));
+    SC(sqlite3_step(query));
+    SC(sqlite3_finalize(query));
+
+    int id = sqlite3_last_insert_rowid(db);
+
+    return ChannelFilter(id, name);
+}
+
+std::vector<ChannelFilter> ChannelFilter::get_all(sqlite3 *db)
+{
+    std::vector<ChannelFilter> result;
+
+    sqlite3_stmt *query;
+    SC(sqlite3_prepare_v2(db, "SELECT * FROM channel_filters ORDER BY id;", -1, &query, nullptr));
+    while(sqlite3_step(query) == SQLITE_ROW) {
+        result.emplace_back(query);
+    }
+    SC(sqlite3_finalize(query));
+
+    return result;
 }

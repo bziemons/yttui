@@ -94,6 +94,20 @@ UPDATE settings SET value="2" WHERE key="schema_version";
 )";
         SC(sqlite3_exec(db, sql.c_str(), nullptr, nullptr, nullptr));
     }
+    if(schema_version < 3) {
+        const std::string sql = R"(
+CREATE TABLE channel_filters (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    video_mask INTEGER DEFAULT 0,
+    video_value INTEGER DEFAULT 0,
+    user_mask INTEGER DEFAULT 0,
+    user_value INTEGER DEFAULT 0
+);
+UPDATE settings SET value="3" WHERE key="schema_version";
+)";
+        SC(sqlite3_exec(db, sql.c_str(), nullptr, nullptr, nullptr));
+    }
 }
 
 std::string db_get_setting(const std::string &key)

@@ -52,7 +52,11 @@ public:
     uint32_t user_value;
 
     ChannelFilter();
+    ChannelFilter(sqlite3_stmt *row);
+    void save(sqlite3 *db) const;
 
+    static ChannelFilter add(sqlite3 *db, const std::string &name);
+    static std::vector<ChannelFilter> get_all(sqlite3 *db);
 private:
     ChannelFilter(const int id, const std::string &name);
 };
@@ -69,7 +73,7 @@ public:
 
     Channel(sqlite3_stmt *row);
     static Channel add(sqlite3 *db, const std::string &selector, const std::string &value);
-    static Channel add_virtual(const std::string &name, const ChannelFilter filter);
+    static Channel add_virtual(const std::string &name, const ChannelFilter &filter);
     static std::vector<Channel> get_all(sqlite3 *db);
 
     std::string upload_playlist() const;

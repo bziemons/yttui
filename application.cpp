@@ -533,6 +533,7 @@ void action_add_new_user_flag() {
 
 void action_rename_user_flag() {
     std::vector<std::string> names;
+    names.resize(userFlags.size());
     for(const UserFlag &flag: userFlags) {
         names.push_back(flag.name);
     }
@@ -547,16 +548,15 @@ void action_rename_user_flag() {
     flag.save(db);
 }
 
+constexpr const char userflag_keys[] = "1234567890"
+                                       "abcdefghij"
+                                       "klmnopqrst"
+                                       "uv";
+static_assert(sizeof(userflag_keys) == UserFlag::max_flag_count + 1, "There must be a key for each UserFlag"); // +1 to accomodate for the 0 byte at the end
+const std::string userflag_keys_str(userflag_keys);
+
 void action_manage_user_flags() {
     bool done = false;
-
-    constexpr const char userflag_keys[] = "1234567890"
-                                           "abcdefghij"
-                                           "klmnopqrst"
-                                           "uv";
-    const std::string userflag_keys_str(userflag_keys);
-    // +1 to accomodate for the 0 byte at the end
-    static_assert(sizeof(userflag_keys) == UserFlag::max_flag_count + 1, "There must be a key for each UserFlag");
 
     size_t channel_name_width = 0;
     for(const Channel &c: channels) {
@@ -630,6 +630,128 @@ void action_manage_user_flags() {
             }
         }
     } while (!done);
+}
+
+void edit_channel_filter(ChannelFilter &filter) {
+    bool done = false;
+
+    size_t max_flag_name_width = std::max(string_width("Watched"), string_width("Downloaded"));
+    for(const UserFlag &flag: userFlags) {
+        max_flag_name_width = std::max(max_flag_name_width, string_width(flag.name));
+    }
+    const size_t space_per_column = 3+max_flag_name_width+1; // " x Flag name "
+
+    std::vector<action> actions = {
+        {EV_IGNORE, "F3", 0, nullptr, "Rename channel filter"},
+        {TERMPAINT_EV_KEY, "Escape", 0, [&]{ done = true; }, "Stop channel filter editing"},
+        {EV_IGNORE, ".", 0, nullptr, "Toggle \"Downloaded\" flag for selected filter"},
+        {EV_IGNORE, ",", 0, nullptr, "Toggle \"Watched\" flag for selected filter"},
+        {EV_IGNORE, "1..0,a..v", 0, nullptr, "Toggle user flags for selected filter"},
+    };
+
+    const auto draw_flag = [&](int x, int y, const char key, const std::string &name, bool active, bool value) {
+        char key_buf[2] = {key, 0};
+        termpaint_attr *attr = get_attr(active ? ASUnwatched : ASWatched, active && !value);
+        termpaint_surface_write_with_attr(surface, x + 0, y, key_buf, attr);
+        termpaint_surface_write_with_attr(surface, x + 2, y, name.c_str(), attr);
+    };
+
+    const auto toggle_flag = [&](uint32_t &mask, uint32_t &value, unsigned int flag) {
+        // 0,0 -> 1,1 -> 1,0 -> ...
+        if((mask & flag) == 0 && (value & flag) == 0) {
+            mask |= flag;
+            value |= flag;
+        } else if(mask & flag && value & flag) {
+            value &= ~flag;
+        } else {
+            mask &= ~flag;
+            value &= ~flag;
+        }
+    };
+
+    do {
+        const size_t filer_name_width = string_width(filter.name);
+        const size_t content_rows_needed = 1+1+UserFlag::max_flag_count/2;
+        const size_t box_cols = 1 + 1 + std::max(2*space_per_column, filer_name_width) + 1;
+        const size_t box_rows = 1 + content_rows_needed + 1;
+
+        const size_t filter_name_pos = 1;
+        const size_t divider_pos = box_cols / 2;
+        const size_t flag_pos = 2;
+
+        draw_box_with_caption(0, 0, box_cols, box_rows);
+        termpaint_surface_write_with_attr(surface, filter_name_pos, 1, filter.name.c_str(), get_attr(ASNormal));
+        draw_flag(flag_pos, 2, ',', "Watched", filter.video_mask & kWatched, filter.video_value & kWatched);
+        draw_flag(divider_pos+flag_pos, 2, '.', "Downloaded", filter.video_mask & kDownloaded, filter.video_value & kDownloaded);
+
+        for(size_t i=0; i<userFlags.size(); i++) {
+            const int row = 3 + i / 2;
+            const int col = i % 2;
+            const UserFlag &f = userFlags.at(i);
+            if(i < userFlags.size()) {
+                draw_flag(divider_pos*col + flag_pos, row, userflag_keys_str.at(i), f.name, filter.user_mask & f.id, filter.user_value & f.id);
+            }
+        }
+
+        tp_flush(false);
+
+        auto event = tp_wait_for_event();
+        if(!event)
+            abort();
+
+        if(!tui_handle_action(*event, actions)) {
+            if(event->type == TERMPAINT_EV_CHAR && event->string.length() == 1) {
+                const char ch(event->string[0]);
+                const size_t index = userflag_keys_str.find(ch);
+                if(index == std::string::npos) {
+                    if(ch == ',') {
+                        toggle_flag(filter.video_mask, filter.video_value, kWatched);
+                        filter.save(db);
+                    } else if(ch == '.') {
+                        toggle_flag(filter.video_mask, filter.video_value, kDownloaded);
+                        filter.save(db);
+                    } else {
+                        continue;
+                    }
+                }
+
+                auto flag = std::find_if(userFlags.cbegin(), userFlags.cend(), [&](const UserFlag &f) { return f.id == (1<<index); });
+                if(flag  == userFlags.cend())
+                    continue;
+                toggle_flag(filter.user_mask, filter.user_value, flag->id);
+                filter.save(db);
+            } else if(event->type == TERMPAINT_EV_KEY && event->string == "F3") {
+                std::string name = edit_string("Enter new name", std::string(), filter.name);
+                if(name.empty())
+                    return;
+                filter.name = name;
+                filter.save(db);
+            }
+        }
+    } while (!done);
+}
+
+void action_manage_channel_fitlers() {
+
+    bool done = false;
+
+    do {
+        std::vector<ChannelFilter> filters = ChannelFilter::get_all(db);
+        std::vector<std::string> names = {"Create new"};
+        for(const ChannelFilter &filter: std::as_const(filters))
+            names.push_back(filter.name);
+        const int selected = get_selection("Select channel filter", names);
+        if(selected < 0) {
+            done = true;
+        } else if(selected == 0) {
+            std::string name = get_string("Filter name", "Please enter a name for your filter:");
+            if(!name.empty()) {
+                ChannelFilter::add(db, name);
+            }
+        } else if(selected-1 < (int)filters.size()) {
+            edit_channel_filter(filters.at(selected-1));
+        }
+    } while(!done);
 }
 
 using json = nlohmann::json;
@@ -746,6 +868,11 @@ static void run()
         add_channel_to_list(channel);
     }
 
+    for(const ChannelFilter &filter: ChannelFilter::get_all(db)) {
+        Channel ch = Channel::add_virtual(filter.name, filter);
+        add_channel_to_list(ch);
+    }
+
     if(!channels.empty()) {
         select_channel_by_index(0);
     }
@@ -778,6 +905,7 @@ static void run()
         {TERMPAINT_EV_KEY, "ArrowRight", 0, action_scroll_title_right, "Scroll title right"},
         {TERMPAINT_EV_CHAR, "l", TERMPAINT_MOD_CTRL, [&](){ force_repaint = true; }, "Force redraw"},
         {TERMPAINT_EV_KEY, "F2", 0, action_manage_user_flags, "Manage user flags"},
+        {TERMPAINT_EV_KEY, "F3", 0, action_manage_channel_fitlers, "Manage channel filters"},
     };
 
     bool draw = true;
